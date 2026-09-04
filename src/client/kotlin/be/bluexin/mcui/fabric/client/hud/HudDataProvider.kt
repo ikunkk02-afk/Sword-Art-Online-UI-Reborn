@@ -89,6 +89,7 @@ class HudDataProvider {
             spectator = player.isSpectator,
             survivalHud = gameMode.canHurtPlayer(),
             underwater = player.isEyeInFluid(FluidTags.WATER),
+            onFire = player.isOnFire,
             dead = !player.isAlive,
             firstPerson = minecraft.options.cameraType.isFirstPerson,
             guiWidth = graphics.guiWidth(),

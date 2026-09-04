@@ -13,6 +13,7 @@ import be.bluexin.mcui.render.ArgbColor
 import be.bluexin.mcui.render.RenderContext
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
+import be.bluexin.mcui.themes.HudEffectIconSet
 import be.bluexin.mcui.themes.HudItemSource
 import be.bluexin.mcui.themes.HotbarOrientation
 import be.bluexin.mcui.themes.HudTextSource
@@ -99,6 +100,11 @@ data class TextureRegion(
     val tint: ArgbColor = ArgbColor.WHITE,
 )
 
+data class ProgressTint(
+    val maximum: Float,
+    val tint: ArgbColor,
+)
+
 data class ItemElement(
     override val renderState: ResolvedRenderState = ResolvedRenderState(),
     override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
@@ -133,6 +139,8 @@ data class TexturedProgressBarElement(
     val direction: ProgressDirection,
     val valueSource: HudValueSource,
     val clip: Boolean,
+    val valueTints: List<ProgressTint> = emptyList(),
+    val creativeTint: ArgbColor? = null,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
@@ -172,6 +180,8 @@ data class HotbarElement(
     val selectedSlotTexture: TextureRegion?,
     val orientation: HotbarOrientation,
     val decorations: Boolean,
+    val showOffhand: Boolean = false,
+    val offhandGap: Int = 0,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
@@ -188,6 +198,12 @@ data class EffectListElement(
     val harmfulColor: ArgbColor,
     val showDuration: Boolean,
     val showIcons: Boolean,
+    val showLabels: Boolean = true,
+    val orientation: HotbarOrientation = HotbarOrientation.VERTICAL,
+    val spacing: Int = 0,
+    val iconSize: Int = 18,
+    val iconSet: HudEffectIconSet = HudEffectIconSet.VANILLA,
+    val includePlayerStates: Boolean = false,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }

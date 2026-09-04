@@ -106,7 +106,15 @@
             "textureWidth": 256,
             "textureHeight": 256,
             "tint": "#FF93F43E"
-          }
+          },
+          "valueTints": [
+            { "maximum": 0.1, "tint": "#FFBD0000" },
+            { "maximum": 0.2, "tint": "#FFF40000" },
+            { "maximum": 0.3, "tint": "#FFF47800" },
+            { "maximum": 0.4, "tint": "#FFF4BD00" },
+            { "maximum": 0.5, "tint": "#FFEDEB38" }
+          ],
+          "creativeTint": "#FF4CEDC5"
         },
         {
           "type": "group",
@@ -134,24 +142,8 @@
             },
             {
               "type": "text",
-              "transform": { "x": 20, "y": 2, "z": 2 },
-              "valueSource": "PLAYER_HEALTH",
-              "color": "#FFFFFFFF",
-              "shadow": true,
-              "centered": true
-            },
-            {
-              "type": "text",
-              "transform": { "x": 36, "y": 2, "z": 2 },
-              "text": "/",
-              "color": "#FFFFFFFF",
-              "shadow": true,
-              "centered": true
-            },
-            {
-              "type": "text",
-              "transform": { "x": 52, "y": 2, "z": 2 },
-              "valueSource": "PLAYER_MAX_HEALTH",
+              "transform": { "x": 37, "y": 2, "z": 2 },
+              "textSource": "HEALTH_SUMMARY",
               "color": "#FFFFFFFF",
               "shadow": true,
               "centered": true
@@ -202,16 +194,6 @@
       "type": "group",
       "name": "sao_experience",
       "children": [
-        {
-          "type": "progress_bar",
-          "name": "experience_progress_fallback",
-          "transform": { "x": -91, "y": -30, "z": 1, "anchor": "BOTTOM_CENTER" },
-          "width": 182,
-          "height": 3,
-          "backgroundColor": "#B018241B",
-          "foregroundColor": "#FF80FF98",
-          "valueSource": "EXPERIENCE_PROGRESS"
-        },
         {
           "type": "group",
           "name": "sao_level_panel",
@@ -265,6 +247,8 @@
       "itemXOffset": 2,
       "itemYOffset": 2,
       "decorations": true,
+      "showOffhand": true,
+      "offhandGap": 22,
       "slotTexture": {
         "texture": "saoui:textures/sao/gui.png",
         "u": 0,
@@ -300,25 +284,54 @@
       "textureWidth": 256,
       "textureHeight": 256
     },
+    "ARMOR": {
+      "type": "group",
+      "name": "sao_hidden_vanilla_armor",
+      "children": []
+    },
     "MOUNT_HEALTH": {
-      "type": "progress_bar",
-      "name": "mount_health_safe_fallback",
-      "transform": { "x": -128, "y": 8, "z": 1, "anchor": "TOP_RIGHT" },
-      "width": 120,
-      "height": 5,
-      "backgroundColor": "#B0351B28",
-      "foregroundColor": "#FFE05C91",
-      "valueSource": "MOUNT_HEALTH"
+      "type": "group",
+      "name": "sao_hidden_vanilla_mount_health",
+      "children": []
     },
     "JUMP_BAR": {
-      "type": "progress_bar",
-      "name": "jump_bar_safe_fallback",
-      "transform": { "x": -91, "y": -30, "z": 1, "anchor": "BOTTOM_CENTER" },
+      "type": "textured_progress_bar",
+      "name": "sao_legacy_jump_bar",
+      "transform": { "x": -91, "y": -29, "z": 1, "anchor": "BOTTOM_CENTER" },
       "width": 182,
       "height": 5,
-      "backgroundColor": "#FF293443",
-      "foregroundColor": "#FF55B8FF",
-      "valueSource": "JUMP_PROGRESS"
+      "valueSource": "JUMP_PROGRESS",
+      "clip": true,
+      "backgroundTexture": {
+        "texture": "minecraft:textures/gui/sprites/hud/jump_bar_background.png",
+        "sourceWidth": 182,
+        "sourceHeight": 5,
+        "textureWidth": 182,
+        "textureHeight": 5
+      },
+      "foregroundTexture": {
+        "texture": "minecraft:textures/gui/sprites/hud/jump_bar_progress.png",
+        "sourceWidth": 182,
+        "sourceHeight": 5,
+        "textureWidth": 182,
+        "textureHeight": 5
+      }
+    },
+    "EFFECTS": {
+      "type": "effect_list",
+      "name": "sao_legacy_status_icons",
+      "transform": { "x": 310, "y": 8, "z": 6, "anchor": "TOP_LEFT" },
+      "width": 16,
+      "effectRowHeight": 16,
+      "effectSpacing": -5,
+      "effectIconSize": 16,
+      "effectIconSet": "LEGACY_SAO",
+      "effectOrientation": "HORIZONTAL",
+      "maxEffects": 32,
+      "showEffectDuration": false,
+      "showEffectIcons": true,
+      "showEffectLabels": false,
+      "includePlayerStates": true
     }
   }
 }

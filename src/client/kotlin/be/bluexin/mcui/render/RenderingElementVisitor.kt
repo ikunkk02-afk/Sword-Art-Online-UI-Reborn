@@ -27,10 +27,12 @@ import be.bluexin.mcui.render.element.TexturedProgressBarElement
 import be.bluexin.mcui.render.element.TextureElement
 import be.bluexin.mcui.render.element.TextureRegion
 import be.bluexin.mcui.themes.HudAnchor
+import be.bluexin.mcui.themes.HudEffectIconSet
 import be.bluexin.mcui.themes.HotbarOrientation
 import be.bluexin.mcui.themes.ProgressDirection
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.item.ItemStack
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -108,6 +110,11 @@ class RenderingElementVisitor(
         element.background?.let { drawTextureRegion(it, 0, 0, element.width, element.height) }
         val value = HudBindingResolver.progress(element.valueSource, data)
         if (value <= 0f) return@withElement
+        val dynamicTint = when {
+            data.creative && element.creativeTint != null -> element.creativeTint
+            else -> element.valueTints.firstOrNull { value <= it.maximum }?.tint
+        }
+        val foreground = dynamicTint?.let { element.foreground.copy(tint = it) } ?: element.foreground
 
         val filledWidth = (element.width * value).roundToInt().coerceIn(0, element.width)
         val filledHeight = (element.height * value).roundToInt().coerceIn(0, element.height)
@@ -120,12 +127,12 @@ class RenderingElementVisitor(
         if (element.clip) {
             operations.enableScissor(clipRect)
             try {
-                drawTextureRegion(element.foreground, 0, 0, element.width, element.height)
+                drawTextureRegion(foreground, 0, 0, element.width, element.height)
             } finally {
                 operations.disableScissor()
             }
         } else {
-            drawCroppedTextureRegion(element.foreground, element.width, element.height, clipRect)
+            drawCroppedTextureRegion(foreground, element.width, element.height, clipRect)
         }
     }
 
@@ -160,68 +167,77 @@ class RenderingElementVisitor(
             val offset = index * (element.slotSize + element.slotSpacing)
             val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
             val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
-            val selected = index == data.selectedHotbarSlot
-            val selectedColor = element.selectedSlotColor
-            val background = element.slotBackgroundColor
+            drawHotbarSlot(element, stack, x, y, index == data.selectedHotbarSlot)
+        }
 
-            val themedSlot = if (selected) element.selectedSlotTexture ?: element.slotTexture else element.slotTexture
-            if (themedSlot != null) {
-                drawTextureRegion(themedSlot, x, y, element.slotSize, element.slotSize)
-            } else if (selected && selectedColor != null) {
-                operations.fill(x, y, element.slotSize, element.slotSize, selectedColor)
-                if (background != null && element.slotSize > 2) {
-                    operations.fill(x + 1, y + 1, element.slotSize - 2, element.slotSize - 2, background)
-                }
-            } else if (background != null) {
-                operations.fill(x, y, element.slotSize, element.slotSize, background)
-            }
-
-            operations.item(
-                stack,
-                x + element.itemXOffset,
-                y + element.itemYOffset,
-                element.decorations,
-            )
+        if (element.showOffhand && !data.offHandItem.isEmpty) {
+            val offset = data.hotbarItems.size * (element.slotSize + element.slotSpacing) + element.offhandGap
+            val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
+            val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
+            drawHotbarSlot(element, data.offHandItem, x, y, selected = true)
         }
     }
 
     override fun visit(element: EffectListElement, context: RenderContext) = withElement(element, context) {
         val data = hudData ?: return@withElement
-        data.activeEffects.asSequence()
-            .filter(HudEffectSnapshot::showIcon)
+        effectDisplays(element, data).asSequence()
             .take(element.maxEffects)
-            .forEachIndexed { index, effect ->
-                val y = index * element.rowHeight
-                element.backgroundColor?.let { operations.fill(0, y, element.width, element.rowHeight, it) }
-                val accent = if (effect.beneficial) element.beneficialColor else element.harmfulColor
-                operations.fill(0, y, EFFECT_ACCENT_WIDTH, element.rowHeight, accent)
+            .forEachIndexed { index, display ->
+                val offset = index * (element.rowHeight + element.spacing)
+                val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
+                val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
+                val cellWidth = if (element.showLabels) element.width else maxOf(element.width, element.iconSize)
+                element.backgroundColor?.let { operations.fill(x, y, cellWidth, element.rowHeight, it) }
+                if (element.showLabels) {
+                    val accent = if (display.beneficial) element.beneficialColor else element.harmfulColor
+                    operations.fill(x, y, EFFECT_ACCENT_WIDTH, element.rowHeight, accent)
+                }
 
-                val textX = if (element.showIcons) EFFECT_ICON_SIZE + EFFECT_ICON_GAP else EFFECT_TEXT_PADDING
+                val textX = x + if (element.showIcons) element.iconSize + EFFECT_ICON_GAP else EFFECT_TEXT_PADDING
                 if (element.showIcons) {
                     operations.texture(
-                        texture = effectTexture(effect),
-                        x = EFFECT_ICON_X,
-                        y = y + (element.rowHeight - EFFECT_ICON_SIZE) / 2,
-                        width = EFFECT_ICON_SIZE,
-                        height = EFFECT_ICON_SIZE,
+                        texture = display.texture,
+                        x = x + if (element.showLabels) EFFECT_ICON_X else 0,
+                        y = y + (element.rowHeight - element.iconSize) / 2,
+                        width = element.iconSize,
+                        height = element.iconSize,
                         u = 0f,
                         v = 0f,
-                        sourceWidth = EFFECT_ICON_SIZE,
-                        sourceHeight = EFFECT_ICON_SIZE,
-                        textureWidth = EFFECT_ICON_SIZE,
-                        textureHeight = EFFECT_ICON_SIZE,
+                        sourceWidth = element.iconSize,
+                        sourceHeight = element.iconSize,
+                        textureWidth = element.iconSize,
+                        textureHeight = element.iconSize,
                         tint = ArgbColor.WHITE,
                     )
                 }
-                operations.text(
-                    effectLabel(effect, element.showDuration),
-                    textX,
-                    y + (element.rowHeight - FONT_HEIGHT) / 2,
-                    element.textColor,
-                    shadow = true,
-                    centered = false,
-                )
+                if (element.showLabels && display.effect != null) {
+                    operations.text(
+                        effectLabel(display.effect, element.showDuration),
+                        textX,
+                        y + (element.rowHeight - FONT_HEIGHT) / 2,
+                        element.textColor,
+                        shadow = true,
+                        centered = false,
+                    )
+                }
             }
+    }
+
+    private fun drawHotbarSlot(element: HotbarElement, stack: ItemStack, x: Int, y: Int, selected: Boolean) {
+        val selectedColor = element.selectedSlotColor
+        val background = element.slotBackgroundColor
+        val themedSlot = if (selected) element.selectedSlotTexture ?: element.slotTexture else element.slotTexture
+        if (themedSlot != null) {
+            drawTextureRegion(themedSlot, x, y, element.slotSize, element.slotSize)
+        } else if (selected && selectedColor != null) {
+            operations.fill(x, y, element.slotSize, element.slotSize, selectedColor)
+            if (background != null && element.slotSize > 2) {
+                operations.fill(x + 1, y + 1, element.slotSize - 2, element.slotSize - 2, background)
+            }
+        } else if (background != null) {
+            operations.fill(x, y, element.slotSize, element.slotSize, background)
+        }
+        operations.item(stack, x + element.itemXOffset, y + element.itemYOffset, element.decorations)
     }
 
     private fun withElement(element: Element, context: RenderContext, draw: () -> Unit) {
@@ -298,9 +314,77 @@ class RenderingElementVisitor(
         )
     }
 
-    private fun effectTexture(effect: HudEffectSnapshot): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
+    private fun effectDisplays(element: EffectListElement, data: HudDataSnapshot): List<EffectDisplay> {
+        val displays = data.activeEffects.asSequence()
+            .filter(HudEffectSnapshot::showIcon)
+            .map { effect ->
+                EffectDisplay(
+                    effect = effect,
+                    texture = when (element.iconSet) {
+                        HudEffectIconSet.VANILLA -> vanillaEffectTexture(effect)
+                        HudEffectIconSet.LEGACY_SAO -> legacySaoEffectTexture(effect) ?: vanillaEffectTexture(effect)
+                    },
+                    beneficial = effect.beneficial,
+                )
+            }
+            .toMutableList()
+
+        if (element.iconSet == HudEffectIconSet.LEGACY_SAO && element.includePlayerStates) {
+            when {
+                data.food <= 6 -> displays += legacySaoState("starving", beneficial = false)
+                data.food <= 18 -> displays += legacySaoState("hungry", beneficial = false)
+            }
+            if (data.underwater && data.air < data.maxAir) {
+                displays += legacySaoState(if (data.air <= 0) "drowning" else "wet", beneficial = false)
+            }
+            if (data.onFire) displays += legacySaoState("burning", beneficial = false)
+        }
+        return displays
+    }
+
+    private fun vanillaEffectTexture(effect: HudEffectSnapshot): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
         effect.id.namespace,
         "textures/mob_effect/${effect.id.path}.png",
+    )
+
+    private fun legacySaoEffectTexture(effect: HudEffectSnapshot): ResourceLocation? {
+        if (effect.id.namespace != "minecraft") return null
+        val icon = when (effect.id.path) {
+            "slowness" -> if (effect.amplifier > 5) "paralyzed" else "slowness"
+            "poison" -> "poisoned"
+            "hunger" -> "rotten"
+            "nausea" -> "ill"
+            "weakness" -> "weak"
+            "wither" -> "cursed"
+            "blindness" -> "blind"
+            "saturation" -> "saturation"
+            "speed" -> "speed_boost"
+            "water_breathing" -> "water_breath"
+            "strength" -> "strength"
+            "absorption" -> "absorption"
+            "fire_resistance" -> "fire_res"
+            "haste" -> "haste"
+            "health_boost" -> "health_boost"
+            "instant_health" -> "inst_health"
+            "invisibility" -> "invisibility"
+            "jump_boost" -> "jump_boost"
+            "night_vision" -> "night_vision"
+            "regeneration" -> "regen"
+            "resistance" -> "resist"
+            else -> return null
+        }
+        return legacySaoStateTexture(icon)
+    }
+
+    private fun legacySaoState(icon: String, beneficial: Boolean): EffectDisplay = EffectDisplay(
+        effect = null,
+        texture = legacySaoStateTexture(icon),
+        beneficial = beneficial,
+    )
+
+    private fun legacySaoStateTexture(icon: String): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
+        "saoui",
+        "textures/sao/status_icons/$icon.png",
     )
 
     private fun effectLabel(effect: HudEffectSnapshot, showDuration: Boolean): String {
@@ -318,11 +402,16 @@ class RenderingElementVisitor(
 
     private companion object {
         const val EFFECT_ACCENT_WIDTH = 2
-        const val EFFECT_ICON_SIZE = 18
         const val EFFECT_ICON_X = 4
         const val EFFECT_ICON_GAP = 8
         const val EFFECT_TEXT_PADDING = 5
         const val FONT_HEIGHT = 9
         const val TICKS_PER_SECOND = 20.0
     }
+
+    private data class EffectDisplay(
+        val effect: HudEffectSnapshot?,
+        val texture: ResourceLocation,
+        val beneficial: Boolean,
+    )
 }

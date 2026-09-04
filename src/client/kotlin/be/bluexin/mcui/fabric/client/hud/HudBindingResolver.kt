@@ -21,6 +21,12 @@ import kotlin.math.roundToInt
 object HudBindingResolver {
     fun text(source: HudTextSource, data: HudDataSnapshot): String = when (source) {
         HudTextSource.PLAYER_NAME -> data.playerName
+        HudTextSource.HEALTH_SUMMARY -> buildString {
+            append(format(data.playerHealth))
+            if (data.playerAbsorption > 0f) append(" (+${format(data.playerAbsorption)})")
+            append(" / ")
+            append(format(data.playerMaxHealth))
+        }
     }
 
     fun progress(source: HudValueSource, data: HudDataSnapshot): Float = when (source) {

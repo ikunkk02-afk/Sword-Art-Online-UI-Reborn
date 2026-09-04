@@ -98,6 +98,13 @@ data class TextureRegionDefinition(
     val tint: ArgbColorDefinition = ArgbColorDefinition.WHITE,
 )
 
+/** Optional static color steps selected from the normalized progress value. */
+@Serializable
+data class ProgressTintDefinition(
+    val maximum: Double,
+    val tint: ArgbColorDefinition,
+)
+
 /**
  * Resolved-value element DTO. Type-specific requirements are enforced by ThemeCompiler,
  * keeping deserialization separate from renderer model construction.
@@ -130,6 +137,8 @@ data class ElementDefinition(
     val direction: ProgressDirection = ProgressDirection.LEFT_TO_RIGHT,
     val backgroundTexture: TextureRegionDefinition? = null,
     val foregroundTexture: TextureRegionDefinition? = null,
+    val valueTints: List<ProgressTintDefinition> = emptyList(),
+    val creativeTint: ArgbColorDefinition? = null,
     val clip: Boolean = true,
     val textSource: HudTextSource? = null,
     val itemSource: HudItemSource? = null,
@@ -143,12 +152,20 @@ data class ElementDefinition(
     val selectedSlotTexture: TextureRegionDefinition? = null,
     val orientation: HotbarOrientation = HotbarOrientation.HORIZONTAL,
     val decorations: Boolean = true,
+    val showOffhand: Boolean = false,
+    val offhandGap: Int = 0,
     val effectRowHeight: Int = 22,
+    val effectSpacing: Int = 0,
+    val effectIconSize: Int = 18,
+    val effectIconSet: HudEffectIconSet = HudEffectIconSet.VANILLA,
+    val effectOrientation: HotbarOrientation = HotbarOrientation.VERTICAL,
     val maxEffects: Int = 8,
     val beneficialColor: ArgbColorDefinition? = null,
     val harmfulColor: ArgbColorDefinition? = null,
     val showEffectDuration: Boolean = true,
     val showEffectIcons: Boolean = true,
+    val showEffectLabels: Boolean = true,
+    val includePlayerStates: Boolean = false,
 )
 
 data class ThemeDefinition(

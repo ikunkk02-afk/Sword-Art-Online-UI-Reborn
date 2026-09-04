@@ -51,6 +51,7 @@ data class HudDataSnapshot(
     val guiHeight: Int,
     val guiScale: Double,
     val partialTick: Float,
+    val onFire: Boolean = false,
 )
 
 data class HudEffectSnapshot(

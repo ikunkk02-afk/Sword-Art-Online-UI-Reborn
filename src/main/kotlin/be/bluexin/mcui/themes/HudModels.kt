@@ -50,6 +50,14 @@ enum class HudAnchor {
 @Serializable
 enum class HudTextSource {
     PLAYER_NAME,
+    HEALTH_SUMMARY,
+}
+
+/** Texture selection used by the resolved effect list; legacy themes never execute old draw code. */
+@Serializable
+enum class HudEffectIconSet {
+    VANILLA,
+    LEGACY_SAO,
 }
 
 /** Typed numeric inputs. Bars normalize these while text renders their raw value. */

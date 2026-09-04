@@ -16,15 +16,15 @@ object HudPartVisibility {
         HudPartType.HEALTH_BOX,
         HudPartType.ARMOR -> data.survivalHud && !data.spectator && !data.dead
 
-        HudPartType.FOOD -> data.survivalHud && !data.spectator && !data.dead && !data.hasLivingMount
+        HudPartType.FOOD -> data.survivalHud && !data.spectator && !data.dead
 
-        HudPartType.AIR -> data.survivalHud && !data.spectator && !data.dead &&
-            (data.underwater || data.air < data.maxAir)
+        HudPartType.AIR -> data.survivalHud && !data.spectator && !data.dead && data.air < data.maxAir
 
         HudPartType.HOTBAR -> !data.spectator && !data.dead
-        HudPartType.EXPERIENCE -> data.experienceVisible && !data.spectator && !data.dead && !data.hasJumpingMount
+        HudPartType.EXPERIENCE -> data.experienceVisible && !data.spectator && !data.dead
         HudPartType.CROSS_HAIR -> data.firstPerson && !data.dead
-        HudPartType.EFFECTS -> data.activeEffects.any(HudEffectSnapshot::showIcon)
+        HudPartType.EFFECTS -> data.activeEffects.any(HudEffectSnapshot::showIcon) ||
+            data.food <= HUNGRY_THRESHOLD || (data.underwater && data.air < data.maxAir) || data.onFire
         HudPartType.MOUNT_HEALTH -> data.hasLivingMount && !data.spectator && !data.dead
         HudPartType.JUMP_BAR -> data.hasJumpingMount && !data.spectator && !data.dead
 
@@ -32,4 +32,6 @@ object HudPartVisibility {
         HudPartType.PARTY,
         HudPartType.ENTITY_HEALTH_HUD -> false
     }
+
+    private const val HUNGRY_THRESHOLD = 18
 }

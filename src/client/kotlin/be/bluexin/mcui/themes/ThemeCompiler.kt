@@ -19,6 +19,7 @@ import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
 import be.bluexin.mcui.render.element.HudItemElement
 import be.bluexin.mcui.render.element.ProgressBarElement
+import be.bluexin.mcui.render.element.ProgressTint
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
 import be.bluexin.mcui.render.element.TexturedProgressBarElement
@@ -322,6 +323,14 @@ class ThemeCompiler(
         val background = element.backgroundTexture?.let {
             compileTextureRegion(definition, it, "$path.backgroundTexture", width, height, issues)
         }
+        val valueTints = element.valueTints.mapIndexedNotNull { index, step ->
+            if (!step.maximum.isFinite() || step.maximum !in 0.0..1.0) {
+                issues.error(definition, "$path.valueTints[$index].maximum", "Progress tint maximum must be in 0..1")
+                null
+            } else {
+                ProgressTint(step.maximum.toFloat(), ArgbColor(step.tint.value))
+            }
+        }.sortedBy(ProgressTint::maximum)
         return TexturedProgressBarElement(
             renderState = state,
             transform = transform,
@@ -332,6 +341,8 @@ class ThemeCompiler(
             direction = element.direction,
             valueSource = source,
             clip = element.clip,
+            valueTints = valueTints,
+            creativeTint = element.creativeTint?.let { ArgbColor(it.value) },
         )
     }
 
@@ -390,6 +401,10 @@ class ThemeCompiler(
             issues.error(definition, "$path.slotSpacing", "Hotbar slotSpacing must not be negative")
             return null
         }
+        if (element.offhandGap < 0) {
+            issues.error(definition, "$path.offhandGap", "Hotbar offhandGap must not be negative")
+            return null
+        }
         return HotbarElement(
             renderState = state,
             transform = transform,
@@ -414,6 +429,8 @@ class ThemeCompiler(
             },
             orientation = element.orientation,
             decorations = element.decorations,
+            showOffhand = element.showOffhand,
+            offhandGap = element.offhandGap,
         )
     }
 
@@ -430,12 +447,20 @@ class ThemeCompiler(
             issues.error(definition, "$path.effectRowHeight", "Effect row height must be greater than zero")
             return null
         }
-        if (element.showEffectIcons && element.effectRowHeight < EFFECT_ICON_SIZE) {
+        if (element.effectIconSize <= 0) {
+            issues.error(definition, "$path.effectIconSize", "Effect icon size must be greater than zero")
+            return null
+        }
+        if (element.showEffectIcons && element.effectRowHeight < element.effectIconSize) {
             issues.error(
                 definition,
                 "$path.effectRowHeight",
-                "Effect row height must be at least $EFFECT_ICON_SIZE when icons are enabled",
+                "Effect row height must be at least effectIconSize when icons are enabled",
             )
+            return null
+        }
+        if (element.effectRowHeight + element.effectSpacing <= 0) {
+            issues.error(definition, "$path.effectSpacing", "Effect rowHeight + effectSpacing must be positive")
             return null
         }
         if (element.maxEffects <= 0) {
@@ -454,6 +479,12 @@ class ThemeCompiler(
             harmfulColor = ArgbColor(element.harmfulColor?.value ?: DEFAULT_HARMFUL_COLOR),
             showDuration = element.showEffectDuration,
             showIcons = element.showEffectIcons,
+            showLabels = element.showEffectLabels,
+            orientation = element.effectOrientation,
+            spacing = element.effectSpacing,
+            iconSize = element.effectIconSize,
+            iconSet = element.effectIconSet,
+            includePlayerStates = element.includePlayerStates,
         )
     }
 
@@ -642,7 +673,6 @@ class ThemeCompiler(
     }
 
     companion object {
-        private const val EFFECT_ICON_SIZE = 18
         private const val DEFAULT_BENEFICIAL_COLOR = -11141291
         private const val DEFAULT_HARMFUL_COLOR = -43691
         private val SUPPORTED_FORMATS = setOf(
