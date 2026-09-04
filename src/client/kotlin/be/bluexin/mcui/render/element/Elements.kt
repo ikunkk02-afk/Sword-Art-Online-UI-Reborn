@@ -13,6 +13,9 @@ import be.bluexin.mcui.render.ArgbColor
 import be.bluexin.mcui.render.RenderContext
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
+import be.bluexin.mcui.themes.HudItemSource
+import be.bluexin.mcui.themes.HudValueSource
+import be.bluexin.mcui.themes.ProgressDirection
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
@@ -29,6 +32,10 @@ interface ElementVisitor {
     fun visit(element: TextElement, context: RenderContext)
     fun visit(element: TextureElement, context: RenderContext)
     fun visit(element: ItemElement, context: RenderContext)
+    fun visit(element: ProgressBarElement, context: RenderContext)
+    fun visit(element: DynamicTextElement, context: RenderContext)
+    fun visit(element: HudItemElement, context: RenderContext)
+    fun visit(element: HotbarElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -83,6 +90,54 @@ data class ItemElement(
     val stack: ItemStack,
     val decorations: Boolean = true,
     val countText: String? = null,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class ProgressBarElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val width: Int,
+    val height: Int,
+    val backgroundColor: ArgbColor?,
+    val foregroundColor: ArgbColor,
+    val direction: ProgressDirection,
+    val valueSource: HudValueSource,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class DynamicTextElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val valueSource: HudValueSource,
+    val color: ArgbColor = ArgbColor.WHITE,
+    val shadow: Boolean = false,
+    val centered: Boolean = false,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class HudItemElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val source: HudItemSource,
+    val decorations: Boolean = true,
+    val countText: String? = null,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class HotbarElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val slotSize: Int,
+    val slotSpacing: Int,
+    val itemXOffset: Int,
+    val itemYOffset: Int,
+    val slotBackgroundColor: ArgbColor?,
+    val selectedSlotColor: ArgbColor?,
+    val decorations: Boolean,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }

@@ -68,7 +68,10 @@ data class ThemeMetadata(
 @Serializable
 data class ThemeDocument(
     val version: String = "1",
-    val root: ElementDefinition,
+    /** Phase-three compatibility overlay. It is rendered independently of HUD parts. */
+    val root: ElementDefinition? = null,
+    /** Historical HUD part names with the phase-four resolved element schema. */
+    val parts: Map<HudPartType, ElementDefinition> = emptyMap(),
 )
 
 @Serializable
@@ -77,10 +80,11 @@ data class TransformDefinition(
     val y: Double = 0.0,
     val z: Double = 0.0,
     val scale: Double = 1.0,
+    val anchor: HudAnchor = HudAnchor.TOP_LEFT,
 )
 
 /**
- * Minimal phase-three element DTO. Type-specific requirements are enforced by ThemeCompiler,
+ * Resolved-value element DTO. Type-specific requirements are enforced by ThemeCompiler,
  * keeping deserialization separate from renderer model construction.
  */
 @Serializable
@@ -104,6 +108,18 @@ data class ElementDefinition(
     val textureWidth: Int? = null,
     val textureHeight: Int? = null,
     val tint: ArgbColorDefinition? = null,
+    val valueSource: HudValueSource? = null,
+    val backgroundColor: ArgbColorDefinition? = null,
+    val foregroundColor: ArgbColorDefinition? = null,
+    val direction: ProgressDirection = ProgressDirection.LEFT_TO_RIGHT,
+    val itemSource: HudItemSource? = null,
+    val slotSize: Int = 20,
+    val slotSpacing: Int = 0,
+    val itemXOffset: Int = 2,
+    val itemYOffset: Int = 2,
+    val slotBackgroundColor: ArgbColorDefinition? = null,
+    val selectedSlotColor: ArgbColorDefinition? = null,
+    val decorations: Boolean = true,
 )
 
 data class ThemeDefinition(

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "be.bluexin.mcui.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "GuiHudSuppressionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

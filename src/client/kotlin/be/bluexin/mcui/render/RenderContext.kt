@@ -9,6 +9,8 @@
 
 package be.bluexin.mcui.render
 
+import be.bluexin.mcui.themes.HudAnchor
+
 /** Values resolved for one HUD frame; no script runtime is involved. */
 data class RenderContext(
     val partialTick: Float,
@@ -23,6 +25,7 @@ data class ResolvedTransform(
     val z: Float = 0f,
     val scaleX: Float = 1f,
     val scaleY: Float = 1f,
+    val anchor: HudAnchor = HudAnchor.TOP_LEFT,
 ) {
     companion object {
         val IDENTITY = ResolvedTransform()

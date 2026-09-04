@@ -1,94 +1,144 @@
 {
-  "version": "1",
+  "version": "2",
   "root": {
-    "type": "group",
-    "name": "phase_3_root",
+    "type": "text",
+    "name": "phase_3_root_compatibility_overlay",
     "transform": {
-      "x": 16,
-      "y": 16,
+      "x": 0,
+      "y": 3,
       "z": 0,
-      "scale": 1.0
+      "anchor": "TOP_CENTER"
     },
-    "children": [
-      {
-        "type": "rectangle",
-        "name": "panel",
-        "width": 224,
-        "height": 70,
-        "color": "#B0202630"
-      },
-      {
-        "type": "text",
-        "name": "title",
-        "transform": {
-          "x": 12,
-          "y": 10,
-          "z": 2
+    "text": "MCUI HUD Phase 4",
+    "color": "#FFFFC857",
+    "shadow": true,
+    "centered": true
+  },
+  "parts": {
+    "HEALTH_BOX": {
+      "type": "group",
+      "name": "development_health_box",
+      "transform": { "x": 10, "y": 12, "z": 1 },
+      "children": [
+        {
+          "type": "rectangle",
+          "width": 170,
+          "height": 32,
+          "color": "#B0202630"
         },
-        "text": "Sword Art Online UI: Reborn",
-        "color": "#FFFFFFFF",
-        "shadow": true
-      },
-      {
-        "type": "group",
-        "name": "transformed_content",
-        "transform": {
-          "x": 12,
-          "y": 27,
-          "z": 2,
-          "scale": 0.9
+        {
+          "type": "text",
+          "transform": { "x": 6, "y": 4, "z": 1 },
+          "text": "HEALTH",
+          "color": "#FFFFFFFF",
+          "shadow": true
         },
-        "children": [
-          {
-            "type": "text",
-            "name": "phase_label",
-            "text": "Rendering / Theme Phase 3",
-            "color": "#FFFFC857",
-            "shadow": true
-          },
-          {
-            "type": "rectangle",
-            "name": "hierarchy_probe",
-            "transform": {
-              "x": 0,
-              "y": 17,
-              "z": 0
-            },
-            "width": 118,
-            "height": 10,
-            "color": "#A044A66C"
-          },
-          {
-            "type": "text",
-            "name": "hierarchy_text",
-            "transform": {
-              "x": 5,
-              "y": 18,
-              "z": 1,
-              "scale": 0.75
-            },
-            "text": "resource-driven group",
-            "color": "#FFFFFFFF"
-          }
-        ]
-      },
-      {
-        "type": "texture",
-        "name": "mcui_logo",
-        "transform": {
-          "x": 150,
-          "y": 9,
-          "z": 1
+        {
+          "type": "progress_bar",
+          "transform": { "x": 6, "y": 18, "z": 1 },
+          "width": 126,
+          "height": 8,
+          "backgroundColor": "#FF3A2020",
+          "foregroundColor": "#FFE54848",
+          "valueSource": "PLAYER_HEALTH"
         },
-        "texture": "mcui:icon.png",
-        "width": 60,
-        "height": 25,
-        "sourceWidth": 300,
-        "sourceHeight": 124,
-        "textureWidth": 300,
-        "textureHeight": 124,
-        "tint": "#E6FFFFFF"
-      }
-    ]
+        {
+          "type": "text",
+          "transform": { "x": 150, "y": 17, "z": 2 },
+          "valueSource": "PLAYER_HEALTH",
+          "color": "#FFFFFFFF",
+          "shadow": true,
+          "centered": true
+        }
+      ]
+    },
+    "FOOD": {
+      "type": "group",
+      "name": "development_food",
+      "transform": { "x": -130, "y": 12, "z": 1, "anchor": "TOP_RIGHT" },
+      "children": [
+        {
+          "type": "text",
+          "text": "FOOD",
+          "color": "#FFFFFFFF",
+          "shadow": true
+        },
+        {
+          "type": "progress_bar",
+          "transform": { "x": 0, "y": 13, "z": 1 },
+          "width": 120,
+          "height": 7,
+          "backgroundColor": "#FF352A18",
+          "foregroundColor": "#FFF5AB2A",
+          "valueSource": "FOOD"
+        }
+      ]
+    },
+    "EXPERIENCE": {
+      "type": "group",
+      "name": "development_experience",
+      "transform": { "x": -91, "y": -36, "z": 1, "anchor": "BOTTOM_CENTER" },
+      "children": [
+        {
+          "type": "progress_bar",
+          "width": 182,
+          "height": 5,
+          "backgroundColor": "#FF18351F",
+          "foregroundColor": "#FF48E56C",
+          "valueSource": "EXPERIENCE_PROGRESS"
+        },
+        {
+          "type": "text",
+          "transform": { "x": 91, "y": -11, "z": 1 },
+          "valueSource": "EXPERIENCE_LEVEL",
+          "color": "#FF80FF98",
+          "shadow": true,
+          "centered": true
+        }
+      ]
+    },
+    "AIR": {
+      "type": "group",
+      "name": "development_air",
+      "transform": { "x": -112, "y": -52, "z": 1, "anchor": "BOTTOM_RIGHT" },
+      "children": [
+        {
+          "type": "text",
+          "text": "AIR",
+          "color": "#FFFFFFFF",
+          "shadow": true
+        },
+        {
+          "type": "progress_bar",
+          "transform": { "x": 0, "y": 13, "z": 1 },
+          "width": 102,
+          "height": 7,
+          "backgroundColor": "#FF15313A",
+          "foregroundColor": "#FF2ADDF5",
+          "valueSource": "AIR",
+          "direction": "RIGHT_TO_LEFT"
+        }
+      ]
+    },
+    "HOTBAR": {
+      "type": "hotbar",
+      "name": "development_hotbar",
+      "transform": { "x": -90, "y": -24, "z": 2, "anchor": "BOTTOM_CENTER" },
+      "slotSize": 20,
+      "slotSpacing": 0,
+      "itemXOffset": 2,
+      "itemYOffset": 2,
+      "slotBackgroundColor": "#B0202630",
+      "selectedSlotColor": "#FFFFC857",
+      "decorations": true
+    },
+    "CROSS_HAIR": {
+      "type": "rectangle",
+      "name": "development_crosshair",
+      "transform": { "x": -1, "y": -1, "z": 10, "anchor": "CENTER" },
+      "width": 3,
+      "height": 3,
+      "color": "#FFFFFFFF"
+    }
   }
 }

@@ -12,14 +12,51 @@ package be.bluexin.mcui.themes
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.render.element.GroupElement
 
+data class ResolvedHud(
+    val globalOverlay: Element? = null,
+    val parts: Map<HudPartType, Element> = emptyMap(),
+) {
+    operator fun get(part: HudPartType): Element? = parts[part]
+
+    fun provides(part: HudPartType): Boolean = part in parts
+
+    companion object {
+        val EMPTY = ResolvedHud()
+    }
+}
+
 data class ResolvedTheme(
     val id: ThemeId,
     val metadata: ThemeMetadata,
-    val hudRoot: Element,
+    val hud: ResolvedHud,
     val sourcePack: String,
     val sourceResource: String,
     val elementCount: Int,
-)
+) {
+    constructor(
+        id: ThemeId,
+        metadata: ThemeMetadata,
+        hudRoot: Element,
+        sourcePack: String,
+        sourceResource: String,
+        elementCount: Int,
+    ) : this(
+        id = id,
+        metadata = metadata,
+        hud = ResolvedHud(globalOverlay = hudRoot),
+        sourcePack = sourcePack,
+        sourceResource = sourceResource,
+        elementCount = elementCount,
+    )
+
+    /** Source compatibility for phase-three callers; new HUD code consumes [hud]. */
+    val hudRoot: Element
+        get() = hud.globalOverlay ?: EMPTY_ROOT
+
+    private companion object {
+        val EMPTY_ROOT = GroupElement(children = emptyList())
+    }
+}
 
 data class ThemeLoadResult(
     val themes: Map<ThemeId, ResolvedTheme>,
@@ -43,7 +80,7 @@ data class ThemeSnapshot(
                 name = "Empty fallback",
                 authors = listOf("MCUI"),
             ),
-            hudRoot = GroupElement(children = emptyList()),
+            hud = ResolvedHud.EMPTY,
             sourcePack = "builtin",
             sourceResource = "builtin:empty",
             elementCount = 1,

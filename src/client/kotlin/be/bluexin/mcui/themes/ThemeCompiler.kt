@@ -12,8 +12,12 @@ package be.bluexin.mcui.themes
 import be.bluexin.mcui.render.ArgbColor
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
+import be.bluexin.mcui.render.element.DynamicTextElement
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.render.element.GroupElement
+import be.bluexin.mcui.render.element.HotbarElement
+import be.bluexin.mcui.render.element.HudItemElement
+import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
 import be.bluexin.mcui.render.element.TextureElement
@@ -31,16 +35,32 @@ class ThemeCompiler(
     fun compile(definition: ThemeDefinition): ThemeCompileResult {
         val issues = mutableListOf<ThemeIssue>()
         validateMetadata(definition, issues)
-        val compiledRoot = compileElement(definition, definition.document.root, "root", issues)
+        val compiledRoot = definition.document.root?.let {
+            compileElement(definition, it, "root", issues)
+        }
+        val compiledParts = linkedMapOf<HudPartType, Element>()
+        definition.document.parts.forEach { (part, element) ->
+            compileElement(definition, element, "parts.$part", issues)?.let {
+                compiledParts[part] = it
+            }
+        }
+        if (definition.document.root == null && definition.document.parts.isEmpty()) {
+            issues.error(definition, "hud", "HUD must define root and/or at least one part")
+        }
         val validation = ThemeValidationResult(issues.toList())
-        val theme = if (compiledRoot != null && validation.isValid) {
+        val theme = if (validation.isValid) {
+            val resolvedHud = ResolvedHud(
+                globalOverlay = compiledRoot,
+                parts = compiledParts.toMap(),
+            )
             ResolvedTheme(
                 id = definition.id,
                 metadata = definition.metadata,
-                hudRoot = compiledRoot,
+                hud = resolvedHud,
                 sourcePack = definition.sourcePack,
                 sourceResource = definition.hudResource,
-                elementCount = countElements(compiledRoot),
+                elementCount = listOfNotNull(compiledRoot).sumOf(::countElements) +
+                    compiledParts.values.sumOf(::countElements),
             )
         } else {
             null
@@ -56,7 +76,7 @@ class ThemeCompiler(
             issues.metadataWarning(
                 definition,
                 "metadata.format",
-                "Legacy mcui:alpha metadata is accepted, but only the phase-three resolved JSON element subset is compiled",
+                "Legacy mcui:alpha metadata is accepted, but only the resolved JSON element subset is compiled",
             )
         } else {
             if (metadata.name == null) {
@@ -134,28 +154,130 @@ class ThemeCompiler(
             }
 
             "text" -> {
-                val text = element.text ?: run {
-                    issues.error(definition, "$path.text", "Text value is required")
-                    null
-                }
-                text?.let {
-                    TextElement(
+                val text = element.text
+                val valueSource = element.valueSource
+                when {
+                    text != null && valueSource != null -> {
+                        issues.error(definition, path, "Text must define exactly one of text or valueSource")
+                        null
+                    }
+
+                    text != null -> TextElement(
                         renderState = state,
                         transform = transform,
-                        text = Component.literal(it),
+                        text = Component.literal(text),
                         color = ArgbColor((element.color ?: ArgbColorDefinition.WHITE).value),
                         shadow = element.shadow,
                         centered = element.centered,
                     )
+
+                    valueSource != null -> DynamicTextElement(
+                        renderState = state,
+                        transform = transform,
+                        valueSource = valueSource,
+                        color = ArgbColor((element.color ?: ArgbColorDefinition.WHITE).value),
+                        shadow = element.shadow,
+                        centered = element.centered,
+                    )
+
+                    else -> {
+                        issues.error(definition, path, "Text must define text or valueSource")
+                        null
+                    }
                 }
             }
 
             "texture" -> compileTexture(definition, element, path, state, transform, issues)
+            "progress", "progress_bar", "bar" -> compileProgressBar(
+                definition,
+                element,
+                path,
+                state,
+                transform,
+                issues,
+            )
+
+            "hud_item", "dynamic_item" -> {
+                val source = element.itemSource ?: run {
+                    issues.error(definition, "$path.itemSource", "Dynamic item source is required")
+                    null
+                }
+                source?.let {
+                    HudItemElement(
+                        renderState = state,
+                        transform = transform,
+                        source = it,
+                        decorations = element.decorations,
+                    )
+                }
+            }
+
+            "hotbar" -> compileHotbar(definition, element, path, state, transform, issues)
             else -> {
                 issues.error(definition, "$path.type", "Unknown element type '${element.type}'")
                 null
             }
         }
+    }
+
+    private fun compileProgressBar(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        val width = positiveDimension(definition, element.width, "$path.width", issues)
+        val height = positiveDimension(definition, element.height, "$path.height", issues)
+        val foreground = element.foregroundColor ?: run {
+            issues.error(definition, "$path.foregroundColor", "Progress foregroundColor is required")
+            null
+        }
+        val source = element.valueSource ?: run {
+            issues.error(definition, "$path.valueSource", "Progress valueSource is required")
+            null
+        }
+        if (width == null || height == null || foreground == null || source == null) return null
+        return ProgressBarElement(
+            renderState = state,
+            transform = transform,
+            width = width,
+            height = height,
+            backgroundColor = element.backgroundColor?.let { ArgbColor(it.value) },
+            foregroundColor = ArgbColor(foreground.value),
+            direction = element.direction,
+            valueSource = source,
+        )
+    }
+
+    private fun compileHotbar(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        if (element.slotSize <= 0) {
+            issues.error(definition, "$path.slotSize", "Hotbar slotSize must be greater than zero")
+            return null
+        }
+        if (element.slotSpacing < 0) {
+            issues.error(definition, "$path.slotSpacing", "Hotbar slotSpacing must not be negative")
+            return null
+        }
+        return HotbarElement(
+            renderState = state,
+            transform = transform,
+            slotSize = element.slotSize,
+            slotSpacing = element.slotSpacing,
+            itemXOffset = element.itemXOffset,
+            itemYOffset = element.itemYOffset,
+            slotBackgroundColor = element.slotBackgroundColor?.let { ArgbColor(it.value) },
+            selectedSlotColor = element.selectedSlotColor?.let { ArgbColor(it.value) },
+            decorations = element.decorations,
+        )
     }
 
     private fun compileTexture(
@@ -244,6 +366,7 @@ class ThemeCompiler(
             z = value.z.toFloat(),
             scaleX = value.scale.toFloat(),
             scaleY = value.scale.toFloat(),
+            anchor = value.anchor,
         )
     }
 

@@ -42,7 +42,7 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | [~] | Elements (new) | `common/.../themes/elements/{Fragment,Group,Hud,...}.kt` | Compare legacy implementations | `src/client/.../render/element/**` | Yes at rendering boundary | Minecraft types only; JOML supplied by Minecraft | Client for phase-two resolved models | Minimal resolved `Group`, `Rectangle`, `Text`, `Texture`, and `Item` elements are complete. Theme serialization, script-backed values, and the full element catalog remain deferred. |
 | [ ] | Legacy Elements | `common/.../themes/elements/legacy/**` | 1.16.5 and 1.12 element packages | `src/main/.../themes/elements/legacy/**` | Yes | XML, MiniScript, Lua, renderer | Split/client-heavy | KSP-generated factories and extensive old rendering calls. Do not delete absent/incomplete features. |
 | [ ] | Screen | `common/.../screens/**`, `deprecated/screens/**` | `1.16.5 .../screens/**`; 1.12 GUI packages | `src/client/.../screens/**` | Yes, substantial | Theme, elements, Lua, config | Client-only | 1.21.1 Screen/GuiGraphics/input signatures must be redesigned around compatibility adapters. |
-| [~] | HUD | new `themes/elements/Hud.kt`, deprecated `IngameGUI.kt` | Mature 1.16.5 HUD; 1.12 historic HUD | `src/client/.../fabric/client/hud/MCUIHudRenderer.kt` | Yes, substantial | Fabric rendering API | Client-only | Phase-two non-invasive callback and smoke tree are complete. Full MCUI HUD composition and vanilla suppression remain deferred. |
+| [x] | HUD | new `themes/elements/Hud.kt`, deprecated `IngameGUI.kt` | Mature 1.16.5 HUD; 1.12 historic HUD | `src/client/.../fabric/client/hud/**` | Yes, substantial | Fabric rendering API | Client-only | Phase-four part composition, per-frame data snapshot, typed bindings, native hotbar, visibility, and selective vanilla replacement are implemented; manual validation remains. |
 | [x] | Rendering abstraction | `themes/elements/renderer/**` | Mature GL calls in 1.16.5/1.12 | `src/client/.../render/**` | Yes, central | `GuiGraphics`; JOML/LWJGL supplied by Minecraft | Client-only | Phase-two operations, 1.21.1 adapter, transform/scissor safety, Visitor, color contract, and minimal elements are implemented. |
 | [~] | GLCore | `common/.../GLCore.kt` | Mature `1.16.5 .../GLCore.kt`; 1.12 GL helpers | Optional future `src/client/.../render/compat/**` | Yes, complete rewrite | New render operations | Client-only | The compatibility strategy is defined; no `LegacyGlCompat` was added because no migrated legacy caller needs it yet. New code must never target a GLCore monolith. |
 | [ ] | MiniScript | `common/.../themes/miniscript/**` | 1.16.5 `themes/util/**` | `src/main/.../themes/miniscript/**` and client context adapters | Yes for game context | JEL, Serialization, Lua mapping | Split | gnu-jel Java 21 compatibility and generated bindings must be proven before inclusion. |
@@ -51,7 +51,7 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | [~] | XML / serialization | `themes/serde/**`, `themes/loader/{Xml,Json}ThemeLoader.kt` | Mature 1.16.5 `themes/util/xml/**`; 1.12 JAXB/theme models | `src/main/.../themes/**` | ResourceLocation parsing moved to compiler | Kotlin Serialization JSON 1.11.0 | Main with client resource adapter | Minimal resolved JSON is complete. XML/xmlutil and legacy Gson polymorphic element JSON remain deferred. |
 | [ ] | Commands | `common/.../commands/**` | Older debug/config commands | `src/client/.../commands/**` or safe main registration | Yes | Fabric command API, theme/config | Client mod | Command source/registration context and client-vs-server semantics need review. |
 | [x] | Resource loading | `themes/loader/**`, Fabric reload listener | Older resource/theme scanners | Split loader models + client Fabric adapter | Yes | Fabric API, Kotlin Serialization JSON | Client adapter | Uses `ResourceManager.listResources/getResource`; no filesystem/JAR scanning. Same-location player-pack overrides follow Minecraft's selected pack stack. |
-| [ ] | Mixins | `common/.../mixin/ModConfigMixin.java`, Fabric mixin JSON | 1.16.5/1.12 mixins/ATs | `src/client/java/be/bluexin/mcui/mixin/**` only if required | Yes | Mixin | Client-only where possible | Template mixins removed. Upstream config mixin is tied to Forge Config Port and is not carried forward. |
+| [~] | Mixins | `common/.../mixin/ModConfigMixin.java`, Fabric mixin JSON | 1.16.5/1.12 mixins/ATs | `src/client/java/be/bluexin/mcui/mixin/client/GuiHudSuppressionMixin.java` | Yes | Mixin | Client-only | One precise GUI mixin gates only the vanilla sub-elements that Fabric 1.21.1 combines into `HOTBAR_AND_BARS`; it never cancels `Gui.render`. |
 | [x] | Fabric platform code (foundation) | `fabric/src/main/**` | None | `src/main/.../fabric`, `src/client/.../fabric/client` | Yes | Fabric Loader/API | Fabric-only | Phase-one entrypoints/reload boundary done. Further callbacks arrive with their systems. |
 | [ ] | Forge platform code | `forge/src/main/**` | 1.16.5 is Forge | None in this phase | N/A | Forge/KotlinForForge | Excluded | Explicitly out of scope; retained only as behavioral reference. |
 | [ ] | Social/party integrations | `social/**`, deprecated party/friend elements | 1.16.5/1.12 SAOMCLib integrations | Undecided | Yes | Former FTB Library/Teams or replacement API | Client/integration | Optional integration contract must be isolated; no hard dependency in phase one. |
@@ -269,13 +269,134 @@ Development chooses `mcui:development_test`; production chooses `mcui:default`, 
 ### Still deferred after phase three
 
 - XML/xmlutil, CSS/ph-css, Lua/LuaJ, MiniScript/JEL, KSP/LuaJ-KSP, and Koin.
-- Legacy 1.12 `parts` JSON, key-discriminator element encoding, expressions/cache wrappers, fragments, widgets, settings execution, scripts, and theme inheritance.
-- JSON ItemStack, complete legacy elements, full HUD part routing, vanilla HUD suppression, screen replacement, social integrations, and configuration/selection UI.
+- Legacy 1.12 key-discriminator elements and expressions/cache wrappers, fragments, widgets, settings execution, scripts, and theme inheritance. The historical top-level `parts` map is now restored with the resolved phase-four element schema.
+- Registry-serialized static JSON ItemStack, complete legacy elements, screen replacement, social integrations, and configuration/selection UI.
 - Complete historical SAO theme assets; only the existing logo is reused by the development theme.
 
-### Recommended phase four priority
+## Phase-four HUD composition foundation
 
-Prioritize the complete HUD system next: establish HUD part composition, lifecycle/data inputs, and selection/config boundaries on top of the now-stable resource-to-resolved pipeline. Then add legacy theme compatibility incrementally. XML serialization should follow once the shared definition/validation contract is settled. MiniScript should be last of these four because it can evaluate into the same resolved values without changing the renderer.
+Status: **Implemented, awaiting manual user validation.** No client launch, world entry, resource-pack test, screenshot test, key simulation, or automated test execution was performed in this phase.
+
+The runtime data flow is now:
+
+`Minecraft client frame -> HudDataProvider -> immutable HudDataSnapshot -> HudRenderCoordinator -> visible ResolvedHud parts -> RenderingElementVisitor -> GuiRenderOperations`
+
+JSON is still parsed and compiled only during resource reload. No resolved element reads `Minecraft.getInstance()`, a player, level, or inventory. The provider copies the nine hotbar stacks and hand stacks for the current frame, and no `LocalPlayer`, `ClientLevel`, `Inventory`, vehicle, or effect instance is retained across frames.
+
+### Historical HUD findings
+
+- All three reference lines use the same 13 part names: `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `CROSS_HAIR`, `ARMOR`, `JUMP_BAR`, `AM2BARS`, `PARTY`, `FOOD`, `EFFECTS`, `AIR`, `MOUNT_HEALTH`, and `ENTITY_HEALTH_HUD`.
+- The 1.12 JSON HUD already used a top-level `parts` object keyed by those enum names. Its child encoding and expression values were tightly coupled to JEL/MiniScript and are not copied.
+- The 1.16.5 implementation replaced individual Forge `IngameGUI` methods. It sourced health, food, air, armor, experience, mount state, jump charge, effects, hotbar slots, nearby entities, and targets from one mutable draw context.
+- Historical hotbar items delegated model, count, and durability rendering to Minecraft's item renderer. The phase-four hotbar preserves that division through `GuiGraphics.renderItem` and `renderItemDecorations`.
+- Historical entity health acquired nearby/target entities with custom capability and ray-trace logic. That target acquisition is deliberately deferred rather than embedded in the new snapshot.
+
+### HUD definition and Phase 3 compatibility
+
+`hud.json` now accepts both fields:
+
+```json
+{
+  "version": "2",
+  "root": { "type": "group", "children": [] },
+  "parts": {
+    "HEALTH_BOX": { "type": "group", "children": [] },
+    "HOTBAR": { "type": "hotbar" }
+  }
+}
+```
+
+`root` is optional and remains the phase-three global overlay. A phase-three document containing only `root` compiles to `ResolvedHud.globalOverlay`, renders exactly once, and suppresses no vanilla HUD. `parts` is optional and uses historical names with the resolved element schema. At least one of `root` or `parts` must be present.
+
+`TransformDefinition` also has an optional `anchor` (`TOP_LEFT`, `TOP_CENTER`, `TOP_RIGHT`, `CENTER`, `BOTTOM_LEFT`, `BOTTOM_CENTER`, or `BOTTOM_RIGHT`). Anchors use `GuiGraphics` logical width/height; x/y are logical-pixel offsets and are never manually multiplied by GUI scale.
+
+### Resolved HUD and coordinator
+
+`ResolvedTheme` owns a `ResolvedHud(globalOverlay, parts)`. The part map is immutable after resource reload. `HudRenderCoordinator` draws the global overlay first, then a stable part order, and consults `HudPartVisibility` for every part. `RenderingElementVisitor` receives the current snapshot for dynamic elements; static rectangle/text/texture/item behavior is unchanged.
+
+### HudDataSnapshot
+
+The per-frame snapshot contains:
+
+- player health, maximum health, absorption, armor;
+- food, fixed maximum food, saturation, fixed maximum saturation;
+- air and maximum air;
+- experience progress, level, and whether the current game mode exposes experience;
+- selected hotbar slot, copied nine-slot hotbar, copied main-hand and off-hand stacks;
+- effect ID, duration, amplifier, ambient/visible/icon/beneficial flags for each active effect;
+- riding state, living-mount presence/health/maximum health;
+- jump-capable mount presence, jump charge, and jump cooldown;
+- crosshair target kind, attack strength, and ready state;
+- creative, spectator, survival-HUD, underwater, dead, and first-person flags;
+- GUI logical width/height, GUI scale metadata, and partial tick.
+
+The provider reads only the current `Minecraft.player`, `level`, and `gameMode` during capture. Mount health is taken only from a current `LivingEntity` vehicle. Jump data uses `LocalPlayer.jumpableVehicle()`, `getJumpRidingScale()`, and the mount's `getJumpCooldown()` adapter path.
+
+### Typed dynamic bindings
+
+`HudValueSource` supports `PLAYER_HEALTH`, `PLAYER_MAX_HEALTH`, `PLAYER_ABSORPTION`, `FOOD`, `MAX_FOOD`, `SATURATION`, `MAX_SATURATION`, `AIR`, `MAX_AIR`, `ARMOR`, `EXPERIENCE_PROGRESS`, `EXPERIENCE_LEVEL`, `MOUNT_HEALTH`, `MOUNT_MAX_HEALTH`, `JUMP_PROGRESS`, and `HOTBAR_SELECTED_SLOT`.
+
+For a progress bar, current-value sources normalize against their matching maximum (armor uses the vanilla 20-point scale). For dynamic text, the same enum yields the raw numeric display value. Text elements must declare exactly one of `text` or `valueSource`; there is no interpolation or expression syntax.
+
+`HudItemSource` supports `HOTBAR_SLOT_0` through `HOTBAR_SLOT_8`, `MAIN_HAND`, and `OFF_HAND`. `hud_item`/`dynamic_item` resolves one copied stack from the snapshot while the existing static `ItemElement` remains unchanged.
+
+### Progress bar and hotbar elements
+
+`progress`, `progress_bar`, and `bar` compile to `ProgressBarElement`. Required fields are positive `width`/`height`, `foregroundColor`, and `valueSource`; `backgroundColor` is optional. Directions are left-to-right, right-to-left, top-to-bottom, and bottom-to-top. Values are clamped to `[0, 1]` before fill dimensions are calculated.
+
+`hotbar` compiles to `HotbarElement`. It draws all nine copied stacks, selected-slot framing, optional per-slot background, configurable slot size/spacing and item offsets, and optional decorations. Item models stay in Minecraft's renderer. `GuiGraphics.renderItemDecorations` supplies count text, durability bars, and the native item cooldown overlay.
+
+### Visibility policy
+
+| Part | Phase-four visibility |
+|---|---|
+| `HEALTH_BOX`, `FOOD`, `ARMOR` | Survival HUD permitted, not spectator, alive. |
+| `AIR` | Same survival conditions and underwater or air below maximum. |
+| `HOTBAR` | Not spectator and alive. Spectator hotbar remains vanilla. |
+| `EXPERIENCE` | Game mode exposes XP, alive, not spectator, and no active jump-capable mount. |
+| `CROSS_HAIR` | First-person and alive; spectator crosshair may still render. |
+| `EFFECTS` | At least one active effect requests an icon. |
+| `MOUNT_HEALTH` | Current vehicle is living, alive, not spectator. |
+| `JUMP_BAR` | Current vehicle is jump-capable, alive, not spectator. |
+| `AM2BARS`, `PARTY` | Reserved/integration-only; no phase-four data provider. |
+| `ENTITY_HEALTH_HUD` | Rendering entry retained; target acquisition and visibility deferred to Phase 5+. |
+
+### Selective vanilla replacement
+
+The active theme suppresses vanilla only when its `ResolvedHud.parts` contains the corresponding part. A `root`-only or partial theme leaves every absent vanilla element intact.
+
+| MCUI part | Vanilla mapping | Mechanism |
+|---|---|---|
+| `CROSS_HAIR` | Crosshair | Precise `renderCrosshair` HEAD gate. |
+| `EFFECTS` | Status-effect icons | Precise `renderEffects` HEAD gate. |
+| `EXPERIENCE` | XP level text | Precise `renderExperienceLevel` HEAD gate. |
+| `HOTBAR` | Normal item hotbar | Precise `renderItemHotbar` HEAD gate. |
+| `EXPERIENCE` | XP bar | Precise `renderExperienceBar` HEAD gate. |
+| `JUMP_BAR` | Mount jump meter | Precise `renderJumpMeter` HEAD gate. |
+| `MOUNT_HEALTH` | Vehicle hearts | Precise `renderVehicleHealth` HEAD gate. |
+| `HEALTH_BOX` | Player hearts/absorption | Redirect only the `renderHearts` call inside `renderPlayerHealth`. |
+| `ARMOR` | Armor icons | Redirect only the `renderArmor` call inside `renderPlayerHealth`. |
+| `FOOD` | Food icons | Redirect only the `renderFood` call inside `renderPlayerHealth`. |
+| `AIR` | Air/bursting-air sprites | Redirect the two direct air sprite blits inside `renderPlayerHealth`. |
+| `PARTY`, `AM2BARS`, `ENTITY_HEALTH_HUD` | No direct vanilla element | No suppression. |
+
+The actual Fabric Rendering API module resolved by `fabric-api 0.116.17+1.21.1` is `fabric-rendering-v1 5.2.1`. It provides the post-HUD `HudRenderCallback`, but not the later `HudLayerRegistrationCallback`, `IdentifiedLayer`, or layer replace/remove operations. MCUI therefore uses the official callback for its own rendering and one client-only `GuiHudSuppressionMixin` for every precise vanilla gate. It does not replace `Gui`, cancel `Gui.render`, touch server logic, or suppress absent theme parts.
+
+### Development theme and deferred work
+
+`mcui:development_test` now provides visibly distinct `HEALTH_BOX`, `FOOD`, `EXPERIENCE`, `AIR`, `HOTBAR`, and `CROSS_HAIR` parts. It includes health/food/XP/air progress bars, dynamic health and level text, and the native nine-slot hotbar. Its small `root` label intentionally exercises phase-three compatibility.
+
+Mount health data, jump data, part visibility, bindings, rendering entry, and vanilla gates are implemented; a dedicated mount-themed development layout is deferred. Effect snapshot and `EFFECTS` lifecycle/suppression are implemented; a native effect-list/icon element is deferred. `ENTITY_HEALTH_HUD` keeps its part type and coordinator entry, but target acquisition and entity snapshots are deferred to Phase 5+.
+
+No Lua, LuaJ, MiniScript, JEL, KSP, Koin, XML/xmlutil, CSS/ph-css, Forge/NeoForge, screen replacement, party implementation, or final SAO assets were added.
+
+### Phase-four compile record
+
+Verified on 2026-09-04 with the configured Java 21 toolchain:
+
+- `.\gradlew.bat compileKotlin compileClientKotlin --no-daemon --no-parallel`: successful after correcting one nullable registry-key conversion and one cross-source-set Kotlin smart cast.
+- `.\gradlew.bat compileClientJava --no-daemon --no-parallel`: successful; this additional source-set check covers the client-only Java Mixin that the preferred Kotlin task selection does not execute.
+- No tests, client launch, world entry, resource reload, screenshot, input simulation, temporary resource pack, or game-runtime validation was performed. Runtime behavior remains **awaiting manual user validation**.
 
 ## Phase-one verification record
 
