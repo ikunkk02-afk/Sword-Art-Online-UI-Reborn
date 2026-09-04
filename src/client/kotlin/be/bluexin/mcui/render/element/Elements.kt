@@ -45,6 +45,9 @@ interface ElementVisitor {
     fun visit(element: EffectListElement, context: RenderContext)
     fun visit(element: EntityHealthListElement, context: RenderContext)
     fun visit(element: TargetEntityHealthElement, context: RenderContext)
+    fun visit(element: LegacySaoHudElement, context: RenderContext)
+    fun visit(element: LegacySaoEffectsElement, context: RenderContext)
+    fun visit(element: LegacySaoEntityHealthElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -184,10 +187,37 @@ data class HotbarElement(
     val selectedSlotColor: ArgbColor?,
     val slotTexture: TextureRegion?,
     val selectedSlotTexture: TextureRegion?,
+    val selectionReplacesSlot: Boolean = false,
     val orientation: HotbarOrientation,
     val decorations: Boolean,
     val showOffhand: Boolean = false,
     val offhandGap: Int = 0,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+/** Dynamic coordinate chain from the original SAO hud.xml (username -> HP text -> level). */
+data class LegacySaoHudElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val texture: ResourceLocation,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+/** Status icons whose global x depends on the measured original username width. */
+data class LegacySaoEffectsElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+/** Right-edge, negative-width entity cards from the original SAO hud.xml. */
+data class LegacySaoEntityHealthElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val texture: ResourceLocation,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }

@@ -22,6 +22,9 @@ import be.bluexin.mcui.render.element.EntityHealthListElement
 import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
 import be.bluexin.mcui.render.element.HudItemElement
+import be.bluexin.mcui.render.element.LegacySaoEffectsElement
+import be.bluexin.mcui.render.element.LegacySaoEntityHealthElement
+import be.bluexin.mcui.render.element.LegacySaoHudElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.ProgressTint
 import be.bluexin.mcui.render.element.RectangleElement
@@ -346,6 +349,13 @@ class ThemeCompiler(
             }
 
             "hotbar" -> compileHotbar(definition, element, path, state, transform, issues)
+            "legacy_sao_hud" -> compileRequiredTexture(definition, element, path, issues)?.let {
+                LegacySaoHudElement(state, transform, it)
+            }
+            "legacy_sao_effects" -> LegacySaoEffectsElement(state, transform)
+            "legacy_sao_entity_health" -> compileRequiredTexture(definition, element, path, issues)?.let {
+                LegacySaoEntityHealthElement(state, transform, it)
+            }
             "effects", "effect_list" -> compileEffectList(definition, element, path, state, transform, issues)
             "entity_health_list", "nearby_entity_health" -> compileEntityHealthList(
                 definition,
@@ -584,6 +594,7 @@ class ThemeCompiler(
                     issues,
                 )
             },
+            selectionReplacesSlot = element.selectionReplacesSlot,
             orientation = element.orientation,
             decorations = element.decorations,
             showOffhand = element.showOffhand,
@@ -738,6 +749,27 @@ class ThemeCompiler(
             foreground = foreground,
             textColor = ArgbColor((element.foregroundColor ?: ArgbColorDefinition.WHITE).value),
         )
+    }
+
+    private fun compileRequiredTexture(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        issues: MutableList<ThemeIssue>,
+    ): ResourceLocation? {
+        val rawTexture = element.texture ?: run {
+            issues.error(definition, "$path.texture", "Texture resource location is required")
+            return null
+        }
+        val texture = ResourceLocation.tryParse(rawTexture)
+        if (texture == null) {
+            issues.error(definition, "$path.texture", "Invalid ResourceLocation '$rawTexture'")
+            return null
+        }
+        if (!textureExists(texture)) {
+            issues.warning(definition, "$path.texture", "Texture '$texture' does not exist in the active resource stack")
+        }
+        return texture
     }
 
     private fun compileTexture(

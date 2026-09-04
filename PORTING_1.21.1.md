@@ -6,13 +6,39 @@ Status legend: `[ ]` not started, `[~]` in progress/foundation only, `[x]` porte
 
 This tracker covers the Fabric-only port to Minecraft 1.21.1, Java 21, Kotlin, Mojang Official Mappings, and Gradle Kotlin DSL.
 
-Reference priority:
+Reference priority is split by purpose:
 
-1. `origin/2.0-1.19.4-port` at `fda4693` — primary architecture source.
-2. `origin/1.16.5` at `9a97a13` — mature implementation fallback.
-3. `origin/2.0-1.12-features` at `7e1a8b0` — historical feature inventory.
+1. `origin/1.16.5` at `9a97a13` — authoritative source for visual geometry, hierarchy, interaction, animation, sounds, XML/CSS values, and assets.
+2. `origin/2.0-1.12-features` at `7e1a8b0` — fallback only where the 1.16.5 implementation is absent, incomplete, or ambiguous.
+3. `origin/2.0-1.19.4-port` at `fda4693` — modern architecture reference only; it is not a visual authority.
 
 No reference branch is checked out or modified. The 1.21.1 work lives on `fabric-1.21.1`.
+
+## Original UI Fidelity Rebuild
+
+The earlier Screen/HUD visual implementation was a functional modernization prototype, not a sufficiently faithful reproduction of the original SAOUI. Its fixed pause-menu panel, flattened category/action layout, generalized buttons, invented screen spacing, and theme-driven HUD transitions were useful compatibility scaffolding, but they are not accepted as original visual evidence.
+
+This rebuild resets the visual authority to `origin/1.16.5`. Original Kotlin/Java source, `themes/sao/menu.xml`, `themes/sao/hud.xml`, `themes/sao/style.css`, texture dimensions/UVs, and original OGG call sites are the only sources allowed for formal SAO UI geometry and behavior. `origin/2.0-1.12-features` is consulted only for gaps, and `origin/2.0-1.19.4-port` remains architecture guidance only.
+
+The Fabric 1.21.1 foundation, `GuiGraphics` rendering boundary, theme/resource-pack loader, resolved elements, HUD snapshots/provider/bindings, vanilla HUD suppression, animation clock, exact vanilla-screen routing, and mount compatibility fix remain in place. Visual implementations above those foundations may be replaced whenever they conflict with original evidence. The component-by-component evidence and parity status live in `ORIGINAL_UI_PARITY.md`; unsupported behavior is explicitly marked `PARTIAL`, `UNKNOWN`, or `DEFERRED / NO ORIGINAL EVIDENCE` rather than being filled with a new design.
+
+### Fidelity rebuild implementation
+
+- The fixed `234×190` pause panel, left-category/right-action layout, generalized `SaoIconButton` menu rows, invented category fades/slides, and Logout confirmation were removed from the in-game menu. `SaoIngameMenuScreen` now owns a relative `CoreGUI`-style tree rooted at `(width/2-10, (height-5*20)/2)`, with the original five `19×19` icons, `20×20` hitboxes, 25px top spacing, recursive right expansion, centered children, cyclic seven-row window, focus opacity, original slot slice, staged appearance, and source-derived sounds.
+- `LegacySaoMetrics` and `LegacySaoHudMetrics` isolate values with direct 1.16.5 evidence. The old animator's unfiltered two-phase client-tick counter is converted to approximately 40 units/second: `3f=75ms`, `4f=100ms`, `10f=250ms`, and `20f=500ms`. The position tween retains `easeInOutQuint`; popup opening retains `easeInQuint`; label fade and popup closing remain linear.
+- Popup, Death, and Profile content now use the original textures, logical atlases, formulas, dimensions, layer order, and interaction shapes. Inventory deliberately falls back to unskinned vanilla because the active 1.16.5 inventory/container implementation is commented out and does not establish a trustworthy visual layout.
+- The formal `mcui:saoui_reborn` HUD is rebuilt from `themes/sao/hud.xml`: the username-dependent HP/food/air/value chain, vertical hotbar, center dot, source-mapped status icons, jump-bar geometry, and negative-width nearby-entity rows replace the modernization prototype. Delayed damage, selected-slot tween, part fade/slide, effect entry animation, and entity-card animation are no longer assigned to the production SAO theme.
+- Original menu/status textures and OGG resources stay at their legacy `saoui:` paths. Sound events are registered individually, and each restored call site uses its evidenced cue; `confirm.ogg` is intentionally not attached to a button because neither authoritative reference branch contains a production call site.
+- Exact vanilla-class routing remains. Generic screen chrome is no longer applied to the fidelity inventory or legacy menu/popup/death surfaces. The incomplete title screen remains explicitly classified as `MODERN COMPATIBILITY / ADAPTED`; removed SAOMCLib party/friend/item-filter data and unknown Inventory/Crafting visuals remain `PARTIAL` or `UNKNOWN`.
+
+### Fidelity rebuild verification record
+
+Verified on 2026-09-05 with the configured Java 21 toolchain:
+
+- `.\gradlew.bat compileKotlin compileClientKotlin compileClientJava --rerun-tasks --no-daemon --no-parallel`: successful.
+- `.\gradlew.bat build -x test --no-daemon --no-parallel`: successful, including client Kotlin/Java compilation, sources remap, and production JAR remap.
+- `git diff --check`: clean. All 67 texture/sound files shared with `origin/1.16.5` have identical Git blob content.
+- No Minecraft client, world, screenshot, automated click, F3+T, GameTest, or JUnit execution was performed. Visual/runtime acceptance remains explicitly assigned to manual user testing.
 
 ## Phase-one foundation
 
@@ -524,7 +550,7 @@ Verified on 2026-09-04 with the configured Java 21 toolchain:
 
 ## Phase-six HUD animation and advanced legacy behavior
 
-Status: **Implemented; awaiting manual user validation.** No client launch, world entry, F3+T, screenshot test, temporary resource pack, or new unit test is part of this phase.
+Status: **Historical modernization prototype; superseded by Original UI Fidelity Rebuild.** The architecture remains, but the production SAO theme no longer uses the invented delayed-damage ghost, selected-slot tween, or generic part/entry fade-slide timings recorded below. This section is intentionally retained as project history rather than rewritten to imply those choices were original behavior.
 
 ### Historical behavior recovered
 
@@ -573,7 +599,7 @@ No new Mixin was added in phase six.
 
 ## Phase Seven — Screen Framework
 
-Status: **Implemented, awaiting manual user validation.** No Minecraft client, world, mouse automation, screenshot test, unit test, GameTest, or runtime resource reload was started.
+Status: **Historical functional prototype; superseded by Original UI Fidelity Rebuild.** Exact vanilla-class routing and compatibility foundations remain. The fixed IngameMenu panel, flattened action list, generalized screen chrome, invented Inventory panels, conventional DeathScreen buttons/text, and generic dialogs described below were removed or replaced because they were not faithful to the 1.16.5 implementation. This section remains visible to preserve that history.
 
 ### Historical screen audit
 

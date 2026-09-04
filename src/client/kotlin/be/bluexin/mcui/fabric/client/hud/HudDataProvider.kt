@@ -13,8 +13,11 @@ import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.NeutralMob
+import net.minecraft.world.entity.monster.Enemy
+import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 
 /** Reads the current client once at the start of an MCUI HUD frame. */
@@ -64,13 +67,20 @@ class HudDataProvider {
         val maxAir = player.maxAirSupply.coerceAtLeast(1)
         val nearbyEntities = minecraft.level!!.getEntitiesOfClass(
             LivingEntity::class.java,
-            player.boundingBox.inflate(ENTITY_HUD_HORIZONTAL_RANGE, ENTITY_HUD_VERTICAL_RANGE, ENTITY_HUD_HORIZONTAL_RANGE),
+            AABB(
+                player.x - ENTITY_HUD_HORIZONTAL_RANGE,
+                player.y - ENTITY_HUD_VERTICAL_RANGE,
+                player.z - ENTITY_HUD_HORIZONTAL_RANGE,
+                player.x + ENTITY_HUD_HORIZONTAL_RANGE,
+                player.y + ENTITY_HUD_VERTICAL_RANGE,
+                player.z + ENTITY_HUD_HORIZONTAL_RANGE,
+            ),
         ) { entity ->
             entity !== player &&
                 entity !== vehicle &&
                 entity !== rootVehicle &&
                 entity.isAlive &&
-                !entity.isInvisibleTo(player)
+                isLegacyAggressiveCandidate(entity, player)
         }
             .asSequence()
             .sortedBy { entity -> player.distanceToSqr(entity) }
@@ -83,7 +93,7 @@ class HudDataProvider {
             ?.let { entitySnapshot(it, player) }
 
         return HudDataSnapshot(
-            playerName = player.displayName?.string ?: player.name.string,
+            playerName = player.scoreboardName,
             playerHealth = player.health,
             playerMaxHealth = player.maxHealth.coerceAtLeast(1f),
             playerAbsorption = player.absorptionAmount,
@@ -124,7 +134,8 @@ class HudDataProvider {
             creative = player.isCreative,
             spectator = player.isSpectator,
             survivalHud = gameMode.canHurtPlayer(),
-            underwater = player.isEyeInFluid(FluidTags.WATER),
+            // Legacy StatusEffects.WET used PlayerEntity.isInWater, not eye-fluid state.
+            underwater = player.isInWater,
             onFire = player.isOnFire,
             dead = !player.isAlive,
             firstPerson = minecraft.options.cameraType.isFirstPerson,
@@ -146,10 +157,18 @@ class HudDataProvider {
         armor = entity.armorValue,
     )
 
+    /** Modern equivalent of the old RenderCapability ColorState.KILLER candidate filter. */
+    private fun isLegacyAggressiveCandidate(entity: LivingEntity, player: LivingEntity): Boolean = when {
+        entity is NeutralMob && entity.isAngry -> true
+        entity is Enemy -> (entity as? Mob)?.let { it.hasLineOfSight(player) || it.target === player } == true
+        else -> false
+    }
+
     private companion object {
         const val HOTBAR_SIZE = 9
         const val DEFAULT_MAX_FOOD = 20
         const val DEFAULT_MAX_SATURATION = 20f
+        // IngameGUI.renderEnemyHealth(): AABB(player.pos-10/-5/-10, player.pos+10/+5/+10).
         const val ENTITY_HUD_HORIZONTAL_RANGE = 10.0
         const val ENTITY_HUD_VERTICAL_RANGE = 5.0
         const val MAX_ENTITY_HUD_ENTRIES = 5

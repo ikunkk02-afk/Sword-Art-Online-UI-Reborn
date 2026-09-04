@@ -24,6 +24,9 @@ import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
 import be.bluexin.mcui.render.element.HudItemElement
 import be.bluexin.mcui.render.element.ItemElement
+import be.bluexin.mcui.render.element.LegacySaoEffectsElement
+import be.bluexin.mcui.render.element.LegacySaoEntityHealthElement
+import be.bluexin.mcui.render.element.LegacySaoHudElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
@@ -36,6 +39,7 @@ import be.bluexin.mcui.themes.HudEffectIconSet
 import be.bluexin.mcui.themes.HotbarOrientation
 import be.bluexin.mcui.themes.ProgressDirection
 import net.minecraft.network.chat.Component
+import net.minecraft.client.Minecraft
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
 import kotlin.math.ceil
@@ -166,7 +170,9 @@ class RenderingElementVisitor(
             val offset = index * stride
             val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
             val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
-            drawHotbarBackground(element, x, y, animatedContext)
+            if (!element.selectionReplacesSlot || index != data.selectedHotbarSlot) {
+                drawHotbarBackground(element, x, y, animatedContext)
+            }
         }
 
         val selectedOffset = (animations.hotbarPosition(
@@ -189,9 +195,285 @@ class RenderingElementVisitor(
             val offset = data.hotbarItems.size * stride + element.offhandGap
             val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
             val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
-            drawHotbarBackground(element, x, y, animatedContext)
+            if (!element.selectionReplacesSlot) drawHotbarBackground(element, x, y, animatedContext)
             drawHotbarSelection(element, x, y, animatedContext)
             drawHotbarItem(element, data.offHandItem, x, y, data.offHandItemPopTime, data.partialTick)
+        }
+    }
+
+    override fun visit(element: LegacySaoHudElement, context: RenderContext) = withElement(element, context) { animatedContext ->
+        val data = hudData ?: return@withElement
+        val font = Minecraft.getInstance().font
+        val usernameWidth = font.width(data.playerName) + LegacySaoHudMetrics.USERNAME_WIDTH_PADDING
+        val smoothHealth = animations.legacyHealthValue(
+            "${element.renderState.key}:health",
+            data.playerHealth,
+            data.playerMaxHealth,
+            data.partialTick,
+            data.dead,
+        )
+        val healthRatio = (smoothHealth / data.playerMaxHealth).coerceIn(0f, 1f)
+        val healthTint = when {
+            data.creative -> LegacySaoHudMetrics.HP_CREATIVE
+            healthRatio <= LegacySaoHudMetrics.HEALTH_VERY_LOW_THRESHOLD -> LegacySaoHudMetrics.HP_VERY_LOW
+            healthRatio <= LegacySaoHudMetrics.HEALTH_LOW_THRESHOLD -> LegacySaoHudMetrics.HP_LOW
+            healthRatio <= LegacySaoHudMetrics.HEALTH_VERY_DAMAGED_THRESHOLD -> LegacySaoHudMetrics.HP_VERY_DAMAGED
+            healthRatio <= LegacySaoHudMetrics.HEALTH_DAMAGED_THRESHOLD -> LegacySaoHudMetrics.HP_DAMAGED
+            healthRatio <= LegacySaoHudMetrics.HEALTH_OKAY_THRESHOLD -> LegacySaoHudMetrics.HP_OKAY
+            else -> LegacySaoHudMetrics.HP_GOOD
+        }
+
+        drawLegacyTexture(
+            element.texture, 0, 0,
+            LegacySaoHudMetrics.FRAME_LEFT_WIDTH, LegacySaoHudMetrics.FRAME_HEIGHT,
+            0f, 0f,
+            LegacySaoHudMetrics.FRAME_LEFT_WIDTH, LegacySaoHudMetrics.FRAME_HEIGHT,
+            LegacySaoHudMetrics.WHITE, animatedContext,
+        )
+        drawLegacyTexture(
+            element.texture, LegacySaoHudMetrics.FRAME_LEFT_WIDTH, 0,
+            usernameWidth, LegacySaoHudMetrics.FRAME_HEIGHT,
+            LegacySaoHudMetrics.FRAME_STRETCH_U.toFloat(), 0f,
+            LegacySaoHudMetrics.FRAME_STRETCH_SOURCE_WIDTH, LegacySaoHudMetrics.FRAME_HEIGHT,
+            LegacySaoHudMetrics.WHITE, animatedContext,
+        )
+        drawLegacyTexture(
+            element.texture, LegacySaoHudMetrics.FRAME_LEFT_WIDTH + usernameWidth, 0,
+            LegacySaoHudMetrics.FRAME_TAIL_WIDTH, LegacySaoHudMetrics.FRAME_HEIGHT,
+            LegacySaoHudMetrics.FRAME_TAIL_U.toFloat(), 0f,
+            LegacySaoHudMetrics.FRAME_TAIL_WIDTH, LegacySaoHudMetrics.FRAME_HEIGHT,
+            LegacySaoHudMetrics.WHITE, animatedContext,
+        )
+        operations.text(
+            data.playerName,
+            LegacySaoHudMetrics.USERNAME_X,
+            LegacySaoHudMetrics.USERNAME_Y,
+            renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+            shadow = true,
+            centered = false,
+        )
+
+        val healthWidth = (LegacySaoHudMetrics.PLAYER_BAR_MAX_WIDTH * healthRatio).roundToInt()
+        if (healthWidth > 0) {
+            drawLegacyTexture(
+                element.texture,
+                LegacySaoHudMetrics.PLAYER_BAR_X + usernameWidth,
+                LegacySaoHudMetrics.HEALTH_BAR_Y,
+                healthWidth,
+                LegacySaoHudMetrics.PLAYER_BAR_HEIGHT,
+                LegacySaoHudMetrics.PLAYER_BAR_U.toFloat(),
+                LegacySaoHudMetrics.PLAYER_BAR_V.toFloat(),
+                healthWidth,
+                LegacySaoHudMetrics.PLAYER_BAR_HEIGHT,
+                healthTint,
+                animatedContext,
+            )
+        }
+
+        if (!data.creative && data.underwater && data.air < data.maxAir) {
+            val airRatio = (data.air.toFloat() / data.maxAir).coerceIn(0f, 1f)
+            val airWidth = (LegacySaoHudMetrics.PLAYER_BAR_MAX_WIDTH * airRatio).roundToInt()
+            if (airWidth > 0) {
+                drawLegacyTexture(
+                    element.texture,
+                    LegacySaoHudMetrics.PLAYER_BAR_X + usernameWidth,
+                    LegacySaoHudMetrics.HEALTH_BAR_Y,
+                    airWidth,
+                    LegacySaoHudMetrics.PLAYER_BAR_HEIGHT,
+                    LegacySaoHudMetrics.PLAYER_BAR_U.toFloat(),
+                    LegacySaoHudMetrics.PLAYER_BAR_V.toFloat(),
+                    airWidth,
+                    LegacySaoHudMetrics.PLAYER_BAR_HEIGHT,
+                    LegacySaoHudMetrics.AIR,
+                    animatedContext,
+                )
+            }
+        }
+
+        if (!data.creative) {
+            val smoothFood = animations.legacyFoodValue(
+                "${element.renderState.key}:food",
+                data.food.toFloat(),
+                data.partialTick,
+            )
+            val foodRatio = (smoothFood / data.maxFood).coerceIn(0f, 1f)
+            val foodWidth = (LegacySaoHudMetrics.FOOD_BAR_MAX_WIDTH * foodRatio).roundToInt()
+            val sourceWidth = (LegacySaoHudMetrics.FOOD_BAR_SOURCE_WIDTH * foodRatio).roundToInt()
+            if (foodWidth > 0 && sourceWidth > 0) {
+                val rotten = data.activeEffects.any { it.id.namespace == "minecraft" && it.id.path == "hunger" }
+                drawLegacyTexture(
+                    element.texture,
+                    LegacySaoHudMetrics.PLAYER_BAR_X + usernameWidth,
+                    LegacySaoHudMetrics.FOOD_BAR_Y,
+                    foodWidth,
+                    LegacySaoHudMetrics.FOOD_BAR_HEIGHT,
+                    0f,
+                    LegacySaoHudMetrics.FOOD_BAR_V.toFloat(),
+                    sourceWidth,
+                    LegacySaoHudMetrics.FOOD_BAR_HEIGHT,
+                    if (rotten) LegacySaoHudMetrics.FOOD_ROTTEN else LegacySaoHudMetrics.FOOD,
+                    animatedContext,
+                )
+            }
+        }
+
+        val healthText = if (data.playerAbsorption > 0f) {
+            Component.translatable(
+                "formatHealthAbsorb",
+                ceil(smoothHealth.toDouble()),
+                ceil(data.playerMaxHealth.toDouble()),
+                ceil(data.playerAbsorption.toDouble()),
+            )
+        } else {
+            Component.translatable("formatHealth", ceil(smoothHealth.toDouble()), ceil(data.playerMaxHealth.toDouble()))
+        }
+        val healthTextWidth = font.width(healthText)
+        val healthPanelX = usernameWidth + LegacySaoHudMetrics.HP_PANEL_BASE_X
+        // hud.xml keeps the string before its translucent three-slice background.
+        operations.text(
+            healthText,
+            healthPanelX + LegacySaoHudMetrics.VALUE_TEXT_X,
+            LegacySaoHudMetrics.VALUE_TEXT_Y,
+            renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+            shadow = true,
+            centered = false,
+        )
+        drawValuePanel(
+            element.texture,
+            healthPanelX,
+            healthTextWidth,
+            LegacySaoHudMetrics.HP_LEFT_U,
+            LegacySaoHudMetrics.VALUE_CAP_WIDTH,
+            LegacySaoHudMetrics.HP_MIDDLE_U,
+            LegacySaoHudMetrics.HP_MIDDLE_SOURCE_WIDTH,
+            LegacySaoHudMetrics.HP_RIGHT_U,
+            LegacySaoHudMetrics.VALUE_CAP_WIDTH,
+            animatedContext,
+        )
+
+        if (data.experienceVisible) {
+            val levelText = Component.translatable("displayLvShort", data.experienceLevel)
+            val levelWidth = font.width(levelText)
+            // EXPERIENCE was a separate absolute HUD part; compensate for this element's (2,2) root.
+            val levelX = usernameWidth + LegacySaoHudMetrics.LEVEL_PANEL_BASE_X + healthTextWidth
+            // Like the HP group, hud.xml lists the string before the background slices.
+            operations.text(
+                levelText,
+                levelX + LegacySaoHudMetrics.VALUE_TEXT_X,
+                LegacySaoHudMetrics.VALUE_TEXT_Y,
+                renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+                shadow = true,
+                centered = false,
+            )
+            drawValuePanel(
+                element.texture,
+                levelX,
+                levelWidth,
+                LegacySaoHudMetrics.LEVEL_LEFT_U,
+                LegacySaoHudMetrics.LEVEL_LEFT_SOURCE_WIDTH,
+                LegacySaoHudMetrics.LEVEL_MIDDLE_U,
+                LegacySaoHudMetrics.LEVEL_MIDDLE_SOURCE_WIDTH,
+                LegacySaoHudMetrics.LEVEL_RIGHT_U,
+                LegacySaoHudMetrics.LEVEL_RIGHT_SOURCE_WIDTH,
+                animatedContext,
+            )
+        }
+    }
+
+    override fun visit(element: LegacySaoEffectsElement, context: RenderContext) = withElement(element, context) { animatedContext ->
+        val data = hudData ?: return@withElement
+        val startX = Minecraft.getInstance().font.width(data.playerName) +
+            LegacySaoHudMetrics.USERNAME_WIDTH_PADDING + LegacySaoHudMetrics.EFFECTS_BASE_X
+        // StatusEffects.getEffects() ignored effects that had no original SAO icon mapping.
+        val textures = data.activeEffects.mapNotNull(::legacySaoEffectTexture).toMutableList()
+        when {
+            data.food <= 6 -> textures += legacySaoStateTexture("starving")
+            data.food <= 18 -> textures += legacySaoStateTexture("hungry")
+        }
+        if (data.underwater && data.air < data.maxAir) {
+            textures += legacySaoStateTexture(if (data.air <= 0) "drowning" else "wet")
+        }
+        if (data.onFire) textures += legacySaoStateTexture("burning")
+        textures.forEachIndexed { index, texture ->
+            operations.texture(
+                texture,
+                startX + index * LegacySaoHudMetrics.EFFECT_X_STEP,
+                LegacySaoHudMetrics.EFFECTS_Y,
+                LegacySaoHudMetrics.EFFECT_ICON_SIZE,
+                LegacySaoHudMetrics.EFFECT_ICON_SIZE,
+                0f,
+                0f,
+                LegacySaoHudMetrics.EFFECT_ICON_SIZE,
+                LegacySaoHudMetrics.EFFECT_ICON_SIZE,
+                LegacySaoHudMetrics.EFFECT_TEXTURE_SIZE,
+                LegacySaoHudMetrics.EFFECT_TEXTURE_SIZE,
+                renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+            )
+        }
+    }
+
+    override fun visit(element: LegacySaoEntityHealthElement, context: RenderContext) = withElement(element, context) { animatedContext ->
+        val data = hudData ?: return@withElement
+        val font = Minecraft.getInstance().font
+        // The active sao/hud.xml repeats nearbyEntitySize; targetEntity was populated
+        // in the old context but is not referenced by this formal theme.
+        val candidates = data.nearbyEntities.asSequence()
+            .sortedBy { it.health / it.maxHealth }
+            .take(LegacySaoHudMetrics.ENTITY_MAX_ROWS)
+        candidates.forEachIndexed { index, entity ->
+            val y = index * LegacySaoHudMetrics.ENTITY_ROW_HEIGHT
+            operations.pushTransform()
+            try {
+                operations.scale(-1f, 1f)
+                val ratio = (entity.health / entity.maxHealth).coerceIn(0f, 1f)
+                val filled = (LegacySaoHudMetrics.ENTITY_FILL_MAX_WIDTH * ratio).roundToInt()
+                if (filled > 0) {
+                    operations.pushTransform()
+                    try {
+                        operations.translate(0f, LegacySaoHudMetrics.ENTITY_FILL_HALF_PIXEL_Y, 0f)
+                        drawLegacyTexture(
+                            element.texture,
+                            LegacySaoHudMetrics.ENTITY_FILL_X,
+                            y + LegacySaoHudMetrics.ENTITY_FILL_Y,
+                            filled,
+                            LegacySaoHudMetrics.ENTITY_FILL_HEIGHT,
+                            LegacySaoHudMetrics.ENTITY_FILL_U.toFloat(),
+                            LegacySaoHudMetrics.ENTITY_FILL_V.toFloat(),
+                            LegacySaoHudMetrics.ENTITY_SOURCE_WIDTH,
+                            LegacySaoHudMetrics.ENTITY_SOURCE_HEIGHT,
+                            LegacySaoHudMetrics.HP_LOW,
+                            animatedContext,
+                        )
+                    } finally {
+                        operations.popTransform()
+                    }
+                }
+                // The original XML draws the silver frame after the colored fill.
+                drawLegacyTexture(
+                    element.texture,
+                    0,
+                    y,
+                    LegacySaoHudMetrics.ENTITY_FRAME_WIDTH,
+                    LegacySaoHudMetrics.ENTITY_FRAME_HEIGHT,
+                    LegacySaoHudMetrics.ENTITY_FRAME_U.toFloat(),
+                    LegacySaoHudMetrics.ENTITY_FRAME_V.toFloat(),
+                    LegacySaoHudMetrics.ENTITY_SOURCE_WIDTH,
+                    LegacySaoHudMetrics.ENTITY_SOURCE_HEIGHT,
+                    LegacySaoHudMetrics.WHITE,
+                    animatedContext,
+                )
+            } finally {
+                operations.popTransform()
+            }
+            val name = entity.displayName.take(LegacySaoHudMetrics.ENTITY_NAME_MAX_LENGTH)
+            operations.text(
+                name,
+                -font.width(name) - LegacySaoHudMetrics.ENTITY_NAME_RIGHT_GAP,
+                y + LegacySaoHudMetrics.ENTITY_NAME_Y,
+                renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+                shadow = true,
+                centered = false,
+            )
         }
     }
 
@@ -423,6 +705,90 @@ class RenderingElementVisitor(
             textureWidth = region.textureWidth,
             textureHeight = region.textureHeight,
             tint = renderColor(region.tint, context),
+        )
+    }
+
+    /** Three-slice HP/LV backgrounds, preserving the child order and UVs in sao/hud.xml. */
+    private fun drawValuePanel(
+        texture: ResourceLocation,
+        x: Int,
+        middleWidth: Int,
+        leftU: Int,
+        leftSourceWidth: Int,
+        middleU: Int,
+        middleSourceWidth: Int,
+        rightU: Int,
+        rightSourceWidth: Int,
+        context: RenderContext,
+    ) {
+        drawLegacyTexture(
+            texture,
+            x,
+            LegacySaoHudMetrics.VALUE_PANEL_Y,
+            LegacySaoHudMetrics.VALUE_CAP_WIDTH,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            leftU.toFloat(),
+            LegacySaoHudMetrics.VALUE_PANEL_V.toFloat(),
+            leftSourceWidth,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            LegacySaoHudMetrics.WHITE,
+            context,
+        )
+        drawLegacyTexture(
+            texture,
+            x + LegacySaoHudMetrics.VALUE_CAP_WIDTH,
+            LegacySaoHudMetrics.VALUE_PANEL_Y,
+            middleWidth,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            middleU.toFloat(),
+            LegacySaoHudMetrics.VALUE_PANEL_V.toFloat(),
+            middleSourceWidth,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            LegacySaoHudMetrics.WHITE,
+            context,
+        )
+        drawLegacyTexture(
+            texture,
+            x + LegacySaoHudMetrics.VALUE_CAP_WIDTH + middleWidth,
+            LegacySaoHudMetrics.VALUE_PANEL_Y,
+            LegacySaoHudMetrics.VALUE_CAP_WIDTH,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            rightU.toFloat(),
+            LegacySaoHudMetrics.VALUE_PANEL_V.toFloat(),
+            rightSourceWidth,
+            LegacySaoHudMetrics.VALUE_PANEL_HEIGHT,
+            LegacySaoHudMetrics.WHITE,
+            context,
+        )
+    }
+
+    private fun drawLegacyTexture(
+        texture: ResourceLocation,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        u: Float,
+        v: Float,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        tint: ArgbColor,
+        context: RenderContext,
+    ) {
+        if (width <= 0 || height <= 0 || sourceWidth <= 0 || sourceHeight <= 0) return
+        operations.texture(
+            texture = texture,
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            u = u,
+            v = v,
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+            textureWidth = LegacySaoHudMetrics.ATLAS_SIZE,
+            textureHeight = LegacySaoHudMetrics.ATLAS_SIZE,
+            tint = renderColor(tint, context),
         )
     }
 

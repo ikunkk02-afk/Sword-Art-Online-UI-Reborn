@@ -14,21 +14,21 @@ import be.bluexin.mcui.themes.HudPartType
 object HudPartVisibility {
     fun isVisible(part: HudPartType, data: HudDataSnapshot): Boolean = when (part) {
         HudPartType.HEALTH_BOX,
-        HudPartType.ARMOR -> data.survivalHud && !data.spectator && !data.dead
+        HudPartType.ARMOR -> !data.spectator && !data.dead
 
-        HudPartType.FOOD -> data.survivalHud && !data.spectator && !data.dead
+        HudPartType.FOOD -> !data.spectator && !data.dead
 
-        HudPartType.AIR -> data.survivalHud && !data.spectator && !data.dead && data.air < data.maxAir
+        HudPartType.AIR -> !data.spectator && !data.dead && data.underwater && data.air < data.maxAir
 
         HudPartType.HOTBAR -> !data.spectator && !data.dead
-        HudPartType.EXPERIENCE -> data.experienceVisible && !data.spectator && !data.dead
+        HudPartType.EXPERIENCE -> !data.spectator && !data.dead && data.experienceVisible
         HudPartType.CROSS_HAIR -> data.firstPerson && !data.dead
-        HudPartType.EFFECTS -> data.activeEffects.any(HudEffectSnapshot::showIcon) ||
+        HudPartType.EFFECTS -> data.activeEffects.isNotEmpty() ||
             data.food <= HUNGRY_THRESHOLD || (data.underwater && data.air < data.maxAir) || data.onFire
         HudPartType.MOUNT_HEALTH -> data.hasLivingMount && !data.spectator && !data.dead
         HudPartType.JUMP_BAR -> data.hasJumpingMount && !data.spectator && !data.dead
 
-        HudPartType.ENTITY_HEALTH_HUD -> data.firstPerson && !data.dead &&
+        HudPartType.ENTITY_HEALTH_HUD -> !data.dead &&
             (data.targetEntity != null || data.nearbyEntities.isNotEmpty())
 
         HudPartType.AM2BARS,

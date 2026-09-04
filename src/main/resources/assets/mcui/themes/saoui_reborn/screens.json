@@ -5,29 +5,29 @@
     "backgroundSecondary": "#F015181E",
     "worldOverlay": "#66000000",
     "worldOverlayAccent": "#182DD8C7",
-    "panel": "#E8FFFFFF",
+    "panel": "#FFFFFFFF",
     "panelDark": "#D92B3038",
     "panelHighlight": "#99FFFFFF",
     "panelShadow": "#99000000",
-    "button": "#E8FFFFFF",
+    "button": "#FFFFFFFF",
     "buttonHover": "#FFC99B13",
-    "buttonFocused": "#FFFFD76A",
-    "buttonPressed": "#FF9E7910",
+    "buttonFocused": "#FFC99B13",
+    "buttonPressed": "#FFC99B13",
     "buttonDisabled": "#FF7C7C7C",
     "selected": "#FFC99B13",
     "accent": "#FFC99B13",
-    "accentLight": "#FFFFD76A",
-    "text": "#FF555555",
+    "accentLight": "#FFC99B13",
+    "text": "#FF888888",
     "textHover": "#FFFFFFFF",
     "textDisabled": "#FFFFFFFF",
     "mutedText": "#FF888888",
     "lightText": "#FFFFFFFF",
     "slot": "#99FFFFFF",
     "slotEquipment": "#66C99B13",
-    "dialog": "#F4FFFFFF",
-    "title": "#FFC99B13",
-    "icon": "#FFFFFFFF",
-    "iconDisabled": "#B0FFFFFF",
+    "dialog": "#FFBBBBBB",
+    "title": "#FF555555",
+    "icon": "#FF888888",
+    "iconDisabled": "#FFFFFFFF",
     "sliderTrack": "#FF555555",
     "editBoxBackground": "#D915181E"
   },
@@ -42,7 +42,7 @@
     "menuBackground": 1.0,
     "worldOverlay": 1.0,
     "panel": 1.0,
-    "disabled": 0.72,
+    "disabled": 1.0,
     "icon": 1.0
   },
   "spacing": {
@@ -53,9 +53,9 @@
     "slotInset": 1
   },
   "animation": {
-    "screenFadeMillis": 180,
-    "panelSlidePixels": 8,
-    "categoryMillis": 160,
-    "buttonStaggerMillis": 15
+    "screenFadeMillis": 0,
+    "panelSlidePixels": 0,
+    "categoryMillis": 0,
+    "buttonStaggerMillis": 0
   }
 }

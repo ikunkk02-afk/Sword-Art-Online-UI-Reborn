@@ -40,6 +40,7 @@ class AnimationRegistry(
     private val partStates = HashMap<HudPartType, HudAnimationState>()
     private val progressStates = HashMap<String, FloatTransition>()
     private val healthStates = HashMap<String, HealthAnimationState>()
+    private val legacyHudValues = HashMap<String, Float>()
     private val hotbarStates = HashMap<String, FloatTransition>()
     private val effectTrackers = HashMap<String, EffectTracker>()
     private val loggedFailures = HashSet<String>()
@@ -118,6 +119,31 @@ class AnimationRegistry(
         healthStates.getOrPut(key, ::HealthAnimationState).update(target, spec, nowNanos)
     }
 
+    /** Literal 1.16.5 player-health recurrence; no delayed damage layer existed. */
+    fun legacyHealthValue(key: String, target: Float, maximum: Float, partialTick: Float, dead: Boolean): Float {
+        val previous = legacyHudValues.getOrPut(key) { target }
+        val next = when {
+            target >= maximum -> maximum
+            dead || target <= 0f -> 0f
+            kotlin.math.round(previous * 10f) != kotlin.math.round(target * 10f) ->
+                previous + (target - previous) * (partialTick.coerceAtLeast(0f) * LEGACY_HEALTH_FACTOR)
+            else -> target
+        }.coerceAtLeast(0f)
+        legacyHudValues[key] = next
+        return next
+    }
+
+    /** Literal legacy hunger rule: losses snap; recovery uses the health recurrence. */
+    fun legacyFoodValue(key: String, target: Float, partialTick: Float): Float {
+        var previous = legacyHudValues.getOrPut(key) { target }
+        if (previous > target) previous = target
+        val next = if (kotlin.math.round(previous * 10f) != kotlin.math.round(target * 10f)) {
+            previous + (target - previous) * (partialTick.coerceAtLeast(0f) * LEGACY_HEALTH_FACTOR)
+        } else target
+        legacyHudValues[key] = next
+        return next
+    }
+
     fun hotbarPosition(key: String, selectedSlot: Int, specs: List<ResolvedAnimationSpec>): Float = guarded(
         key = key,
         property = "HOTBAR_SELECTION",
@@ -165,6 +191,7 @@ class AnimationRegistry(
         partStates.clear()
         progressStates.clear()
         healthStates.clear()
+        legacyHudValues.clear()
         hotbarStates.clear()
         effectTrackers.clear()
         loggedFailures.clear()
@@ -281,5 +308,6 @@ class AnimationRegistry(
         const val VALUE_EPSILON = 0.0001f
         const val NANOS_PER_MILLI = 1_000_000L
         const val DEFAULT_TARGET_LINGER_MILLIS = 3_000
+        const val LEGACY_HEALTH_FACTOR = 0.075f
     }
 }

@@ -14,16 +14,9 @@ interface SaoScreenSurface
 
 /** Exact ownership rules for global-looking screen mixins. */
 object SaoScreenPolicy {
-    private const val VANILLA_SCREEN_PACKAGE = "net.minecraft.client.gui.screens."
-    private val frameOnlyContainers = setOf(
-        "net.minecraft.client.gui.screens.inventory.AnvilScreen",
-        "net.minecraft.client.gui.screens.inventory.BeaconScreen",
-        "net.minecraft.client.gui.screens.inventory.EnchantmentScreen",
-        "net.minecraft.client.gui.screens.inventory.SmithingScreen",
-    )
-
     @JvmStatic
-    fun shouldSkinWidgets(screen: Screen?): Boolean = screen is SaoScreenSurface || isOwnedVanillaScreen(screen)
+    fun shouldSkinWidgets(screen: Screen?): Boolean =
+        screen !is SaoInventoryScreen && screen is SaoScreenSurface
 
     @JvmStatic
     fun shouldReplaceMenuBackground(screen: Screen?): Boolean =
@@ -31,12 +24,11 @@ object SaoScreenPolicy {
 
     @JvmStatic
     fun shouldRenderContainerFrame(screen: Screen?): Boolean =
-        screen is AbstractContainerScreen<*> && (screen is SaoScreenSurface || isOwnedVanillaScreen(screen))
+        screen !is SaoInventoryScreen &&
+            screen is AbstractContainerScreen<*> &&
+            screen is SaoScreenSurface
 
     @JvmStatic
     fun shouldRenderContainerSlots(screen: Screen?): Boolean =
-        shouldRenderContainerFrame(screen) && screen?.javaClass?.name !in frameOnlyContainers
-
-    private fun isOwnedVanillaScreen(screen: Screen?): Boolean =
-        screen != null && screen.javaClass.name.startsWith(VANILLA_SCREEN_PACKAGE)
+        shouldRenderContainerFrame(screen)
 }

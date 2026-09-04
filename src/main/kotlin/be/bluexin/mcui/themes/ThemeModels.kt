@@ -156,6 +156,8 @@ data class ElementDefinition(
     val selectedSlotColor: ArgbColorDefinition? = null,
     val slotTexture: TextureRegionDefinition? = null,
     val selectedSlotTexture: TextureRegionDefinition? = null,
+    /** Original SAO hotbar changes the slot tint instead of stacking a selector. */
+    val selectionReplacesSlot: Boolean = false,
     val orientation: HotbarOrientation = HotbarOrientation.HORIZONTAL,
     val decorations: Boolean = true,
     val showOffhand: Boolean = false,

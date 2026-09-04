@@ -1,6 +1,6 @@
 {
   "format": "mcui:resolved-v1",
-  "version": "5.1.0",
+  "version": "6.0.0",
   "id": "mcui:saoui_reborn",
   "name": "Sword Art Online UI: Reborn",
   "authors": [
@@ -8,6 +8,6 @@
     "Tencao",
     "Sword Art Online UI: Reborn contributors"
   ],
-  "description": "Modern resolved HUD and screen style migrated from the bundled SAO theme and original repository assets.",
+  "description": "Original SAOUI 1.16.5 visual and behavioral fidelity rebuild for Minecraft 1.21.1.",
   "namespace": "saoui"
 }

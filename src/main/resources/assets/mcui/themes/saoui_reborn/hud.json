@@ -1,271 +1,30 @@
 {
-  "version": "5",
-  "fragments": {
-    "health_frame": {
-      "type": "group",
-      "name": "sao_health_frame",
-      "children": [
-        {
-          "type": "texture",
-          "width": 16,
-          "height": 15,
-          "texture": "saoui:textures/sao/gui.png",
-          "u": 0,
-          "v": 0,
-          "sourceWidth": 16,
-          "sourceHeight": 15,
-          "textureWidth": 256,
-          "textureHeight": 256
-        },
-        {
-          "type": "texture",
-          "transform": { "x": 16 },
-          "width": 52,
-          "height": 15,
-          "texture": "saoui:textures/sao/gui.png",
-          "u": 16,
-          "v": 0,
-          "sourceWidth": 5,
-          "sourceHeight": 15,
-          "textureWidth": 256,
-          "textureHeight": 256
-        },
-        {
-          "type": "texture",
-          "transform": { "x": 68 },
-          "width": 234,
-          "height": 15,
-          "texture": "saoui:textures/sao/gui.png",
-          "u": 21,
-          "v": 0,
-          "sourceWidth": 234,
-          "sourceHeight": 15,
-          "textureWidth": 256,
-          "textureHeight": 256
-        }
-      ]
-    },
-    "panel_left_cap": {
-      "type": "texture",
-      "width": 5,
-      "height": 13,
-      "texture": "saoui:textures/sao/gui.png",
-      "u": 60,
-      "v": 15,
-      "sourceWidth": 5,
-      "sourceHeight": 13,
-      "textureWidth": 256,
-      "textureHeight": 256
-    },
-    "panel_right_cap": {
-      "type": "texture",
-      "width": 5,
-      "height": 13,
-      "texture": "saoui:textures/sao/gui.png",
-      "u": 70,
-      "v": 15,
-      "sourceWidth": 5,
-      "sourceHeight": 13,
-      "textureWidth": 256,
-      "textureHeight": 256
-    }
-  },
+  "version": "6",
   "parts": {
     "HEALTH_BOX": {
-      "type": "group",
-      "name": "sao_health_box",
-      "transform": { "x": 8, "y": 8, "z": 1, "anchor": "TOP_LEFT" },
-      "children": [
-        {
-          "type": "fragment_reference",
-          "fragment": "health_frame"
-        },
-        {
-          "type": "text",
-          "name": "player_name",
-          "transform": { "x": 14, "y": 3, "z": 2 },
-          "textSource": "PLAYER_NAME",
-          "color": "#FFFFFFFF",
-          "shadow": true
-        },
-        {
-          "type": "textured_progress_bar",
-          "name": "health_bar",
-          "transform": { "x": 70, "y": 3, "z": 2 },
-          "width": 215,
-          "height": 9,
-          "valueSource": "PLAYER_HEALTH",
-          "direction": "LEFT_TO_RIGHT",
-          "clip": true,
-          "foregroundTexture": {
-            "texture": "saoui:textures/sao/gui.png",
-            "u": 0,
-            "v": 188,
-            "sourceWidth": 215,
-            "sourceHeight": 9,
-            "textureWidth": 256,
-            "textureHeight": 256,
-            "tint": "#FF93F43E"
-          },
-          "delayedForegroundTexture": {
-            "texture": "saoui:textures/sao/gui.png",
-            "u": 0,
-            "v": 188,
-            "sourceWidth": 215,
-            "sourceHeight": 9,
-            "textureWidth": 256,
-            "textureHeight": 256,
-            "tint": "#FFFFBA66"
-          },
-          "healthAnimation": {
-            "mainDuration": 150,
-            "damageDelay": 240,
-            "damageDuration": 420,
-            "healDuration": 180,
-            "easing": "EASE_OUT"
-          },
-          "valueTints": [
-            { "maximum": 0.1, "tint": "#FFBD0000" },
-            { "maximum": 0.2, "tint": "#FFF40000" },
-            { "maximum": 0.3, "tint": "#FFF47800" },
-            { "maximum": 0.4, "tint": "#FFF4BD00" },
-            { "maximum": 0.5, "tint": "#FFEDEB38" }
-          ],
-          "creativeTint": "#FF4CEDC5"
-        },
-        {
-          "type": "group",
-          "name": "health_value_panel",
-          "transform": { "x": 184, "y": 12, "z": 3 },
-          "children": [
-            { "type": "fragment_reference", "fragment": "panel_left_cap" },
-            {
-              "type": "texture",
-              "transform": { "x": 5 },
-              "width": 64,
-              "height": 13,
-              "texture": "saoui:textures/sao/gui.png",
-              "u": 66,
-              "v": 15,
-              "sourceWidth": 5,
-              "sourceHeight": 13,
-              "textureWidth": 256,
-              "textureHeight": 256
-            },
-            {
-              "type": "fragment_reference",
-              "transform": { "x": 69 },
-              "fragment": "panel_right_cap"
-            },
-            {
-              "type": "text",
-              "transform": { "x": 37, "y": 2, "z": 2 },
-              "textSource": "HEALTH_SUMMARY",
-              "color": "#FFFFFFFF",
-              "shadow": true,
-              "centered": true
-            }
-          ]
-        }
-      ]
+      "type": "legacy_sao_hud",
+      "name": "sao_original_health_box",
+      "transform": { "x": 2, "y": 2, "z": 1, "anchor": "TOP_LEFT" },
+      "texture": "saoui:textures/sao/gui.png"
     },
     "FOOD": {
-      "type": "textured_progress_bar",
-      "name": "sao_food_bar",
-      "transform": { "x": 78, "y": 18, "z": 4, "anchor": "TOP_LEFT" },
-      "width": 113,
-      "height": 2,
-      "valueSource": "FOOD",
-      "clip": true,
-      "foregroundTexture": {
-        "texture": "saoui:textures/sao/gui.png",
-        "u": 0,
-        "v": 193,
-        "sourceWidth": 115,
-        "sourceHeight": 2,
-        "textureWidth": 256,
-        "textureHeight": 256,
-        "tint": "#FFF5AB2A"
-      },
-      "animations": [
-        { "property": "PROGRESS", "duration": 160, "easing": "EASE_OUT", "trigger": "ON_VALUE_CHANGE" }
-      ]
+      "type": "group",
+      "name": "sao_food_is_composed_inside_health_box",
+      "children": []
     },
     "AIR": {
-      "type": "textured_progress_bar",
-      "name": "sao_air_bar",
-      "transform": { "x": 78, "y": 11, "z": 5, "anchor": "TOP_LEFT" },
-      "width": 215,
-      "height": 9,
-      "valueSource": "AIR",
-      "clip": true,
-      "foregroundTexture": {
-        "texture": "saoui:textures/sao/gui.png",
-        "u": 0,
-        "v": 188,
-        "sourceWidth": 215,
-        "sourceHeight": 9,
-        "textureWidth": 256,
-        "textureHeight": 256,
-        "tint": "#802ADDF5"
-      },
-      "animations": [
-        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": -6.0, "to": 0.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" },
-        { "property": "TRANSLATION_X", "duration": 140, "easing": "EASE_IN", "from": 0.0, "to": -6.0, "trigger": "ON_HIDE" }
-      ]
+      "type": "group",
+      "name": "sao_air_is_composed_inside_health_box",
+      "children": []
     },
     "EXPERIENCE": {
       "type": "group",
-      "name": "sao_experience",
-      "children": [
-        {
-          "type": "group",
-          "name": "sao_level_panel",
-          "transform": { "x": 270, "y": 20, "z": 3, "anchor": "TOP_LEFT" },
-          "children": [
-            { "type": "fragment_reference", "fragment": "panel_left_cap" },
-            {
-              "type": "texture",
-              "transform": { "x": 5 },
-              "width": 32,
-              "height": 13,
-              "texture": "saoui:textures/sao/gui.png",
-              "u": 66,
-              "v": 15,
-              "sourceWidth": 5,
-              "sourceHeight": 13,
-              "textureWidth": 256,
-              "textureHeight": 256
-            },
-            {
-              "type": "fragment_reference",
-              "transform": { "x": 37 },
-              "fragment": "panel_right_cap"
-            },
-            {
-              "type": "text",
-              "transform": { "x": 8, "y": 2, "z": 2 },
-              "text": "Lv",
-              "color": "#FFFFFFFF",
-              "shadow": true
-            },
-            {
-              "type": "text",
-              "transform": { "x": 29, "y": 2, "z": 2 },
-              "valueSource": "EXPERIENCE_LEVEL",
-              "color": "#FFFFFFFF",
-              "shadow": true,
-              "centered": true
-            }
-          ]
-        }
-      ]
+      "name": "sao_level_is_composed_inside_health_box",
+      "children": []
     },
     "HOTBAR": {
       "type": "hotbar",
-      "name": "sao_vertical_hotbar",
+      "name": "sao_original_vertical_hotbar",
       "transform": { "x": -24, "y": -99, "z": 3, "anchor": "CENTER_RIGHT" },
       "orientation": "VERTICAL",
       "slotSize": 20,
@@ -275,6 +34,7 @@
       "decorations": true,
       "showOffhand": true,
       "offhandGap": 22,
+      "selectionReplacesSlot": true,
       "slotTexture": {
         "texture": "saoui:textures/sao/gui.png",
         "u": 0,
@@ -294,14 +54,11 @@
         "textureWidth": 256,
         "textureHeight": 256,
         "tint": "#FFFFBA66"
-      },
-      "animations": [
-        { "property": "TRANSLATION_Y", "duration": 180, "easing": "EASE_OUT", "trigger": "ON_VALUE_CHANGE" }
-      ]
+      }
     },
     "CROSS_HAIR": {
       "type": "texture",
-      "name": "sao_dot_crosshair",
+      "name": "sao_original_dot_crosshair",
       "transform": { "x": 0, "y": 0, "z": 10, "anchor": "CENTER" },
       "width": 1,
       "height": 1,
@@ -315,97 +72,17 @@
     },
     "ARMOR": {
       "type": "group",
-      "name": "sao_hidden_vanilla_armor",
+      "name": "sao_original_hides_vanilla_armor",
       "children": []
     },
     "MOUNT_HEALTH": {
       "type": "group",
-      "name": "sao_mount_health",
-      "transform": { "x": 8, "y": 38, "z": 1, "anchor": "TOP_LEFT" },
-      "children": [
-        {
-          "type": "fragment_reference",
-          "fragment": "health_frame"
-        },
-        {
-          "type": "text",
-          "name": "mount_name",
-          "transform": { "x": 14, "y": 3, "z": 2 },
-          "textSource": "MOUNT_NAME",
-          "color": "#FFFFFFFF",
-          "shadow": true
-        },
-        {
-          "type": "textured_progress_bar",
-          "name": "mount_health_bar",
-          "transform": { "x": 70, "y": 3, "z": 2 },
-          "width": 215,
-          "height": 9,
-          "valueSource": "MOUNT_HEALTH",
-          "direction": "LEFT_TO_RIGHT",
-          "clip": true,
-          "foregroundTexture": {
-            "texture": "saoui:textures/sao/gui.png",
-            "u": 0,
-            "v": 188,
-            "sourceWidth": 215,
-            "sourceHeight": 9,
-            "textureWidth": 256,
-            "textureHeight": 256,
-            "tint": "#FF93F43E"
-          },
-          "valueTints": [
-            { "maximum": 0.1, "tint": "#FFBD0000" },
-            { "maximum": 0.2, "tint": "#FFF40000" },
-            { "maximum": 0.3, "tint": "#FFF47800" },
-            { "maximum": 0.4, "tint": "#FFF4BD00" },
-            { "maximum": 0.5, "tint": "#FFEDEB38" }
-          ]
-        },
-        {
-          "type": "group",
-          "name": "mount_health_value_panel",
-          "transform": { "x": 184, "y": 12, "z": 3 },
-          "children": [
-            { "type": "fragment_reference", "fragment": "panel_left_cap" },
-            {
-              "type": "texture",
-              "transform": { "x": 5 },
-              "width": 64,
-              "height": 13,
-              "texture": "saoui:textures/sao/gui.png",
-              "u": 66,
-              "v": 15,
-              "sourceWidth": 5,
-              "sourceHeight": 13,
-              "textureWidth": 256,
-              "textureHeight": 256
-            },
-            {
-              "type": "fragment_reference",
-              "transform": { "x": 69 },
-              "fragment": "panel_right_cap"
-            },
-            {
-              "type": "text",
-              "transform": { "x": 37, "y": 2, "z": 2 },
-              "textSource": "MOUNT_HEALTH_SUMMARY",
-              "color": "#FFFFFFFF",
-              "shadow": true,
-              "centered": true
-            }
-          ]
-        }
-      ],
-      "animations": [
-        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "TRANSLATION_Y", "duration": 160, "easing": "EASE_OUT", "from": 5.0, "to": 0.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
-      ]
+      "name": "deferred_no_original_sao_mount_art",
+      "children": []
     },
     "JUMP_BAR": {
       "type": "textured_progress_bar",
-      "name": "sao_legacy_jump_bar",
+      "name": "sao_original_jump_geometry_modern_sprite",
       "transform": { "x": -91, "y": -29, "z": 1, "anchor": "BOTTOM_CENTER" },
       "width": 182,
       "height": 5,
@@ -424,76 +101,23 @@
         "sourceHeight": 5,
         "textureWidth": 182,
         "textureHeight": 5
-      },
-      "animations": [
-        { "property": "ALPHA", "duration": 140, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "TRANSLATION_Y", "duration": 140, "easing": "EASE_OUT", "from": 5.0, "to": 0.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
-      ]
+      }
     },
     "EFFECTS": {
-      "type": "effect_list",
-      "name": "sao_legacy_status_icons",
-      "transform": { "x": 310, "y": 8, "z": 6, "anchor": "TOP_LEFT" },
-      "width": 16,
-      "effectRowHeight": 16,
-      "effectSpacing": -5,
-      "effectIconSize": 16,
-      "effectIconSet": "LEGACY_SAO",
-      "effectOrientation": "HORIZONTAL",
-      "maxEffects": 32,
-      "showEffectDuration": false,
-      "showEffectIcons": true,
-      "showEffectLabels": false,
-      "includePlayerStates": true,
-      "animations": [
-        { "property": "ALPHA", "duration": 140, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
-      ],
-      "entryAnimations": [
-        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": -5.0, "to": 0.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" },
-        { "property": "TRANSLATION_X", "duration": 120, "easing": "EASE_IN", "from": 0.0, "to": -5.0, "trigger": "ON_HIDE" }
-      ]
+      "type": "legacy_sao_effects",
+      "name": "sao_original_status_icons",
+      "transform": { "x": 0, "y": 0, "z": 6, "anchor": "TOP_LEFT" }
     },
     "PARTY": {
       "type": "group",
-      "name": "sao_party_integration_placeholder",
+      "name": "deferred_saomclib_party_backend_unavailable",
       "children": []
     },
     "ENTITY_HEALTH_HUD": {
-      "type": "entity_health_list",
-      "name": "sao_nearby_entity_health",
-      "transform": { "x": -100, "y": 35, "z": 5, "anchor": "TOP_RIGHT" },
-      "width": 80,
-      "entityRowHeight": 15,
-      "maxEntities": 5,
-      "animations": [
-        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
-        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": 8.0, "to": 0.0, "trigger": "ON_SHOW" },
-        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
-      ],
-      "foregroundColor": "#FFFFFFFF",
-      "backgroundTexture": {
-        "texture": "saoui:textures/sao/entities.png",
-        "u": 1,
-        "v": 30,
-        "sourceWidth": 255,
-        "sourceHeight": 30,
-        "textureWidth": 512,
-        "textureHeight": 512
-      },
-      "foregroundTexture": {
-        "texture": "saoui:textures/sao/entities.png",
-        "u": 1,
-        "v": 0,
-        "sourceWidth": 255,
-        "sourceHeight": 30,
-        "textureWidth": 512,
-        "textureHeight": 512,
-        "tint": "#FFF40000"
-      }
+      "type": "legacy_sao_entity_health",
+      "name": "sao_original_nearby_entity_health",
+      "transform": { "x": -20, "y": 35, "z": 5, "anchor": "TOP_RIGHT" },
+      "texture": "saoui:textures/sao/entities.png"
     }
   }
 }
