@@ -9,6 +9,7 @@
 
 package be.bluexin.mcui.themes
 
+import be.bluexin.mcui.themes.legacy.LegacyJsonThemeLoader
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.packs.resources.Resource
 import net.minecraft.server.packs.resources.ResourceManager
@@ -16,6 +17,7 @@ import net.minecraft.server.packs.resources.ResourceManager
 /** Minecraft-facing discovery and IO adapter. Parsing and compilation remain separate stages. */
 class ThemeResourceLoader(
     private val parser: ThemeJsonParser = ThemeJsonParser(),
+    private val legacyJsonLoader: LegacyJsonThemeLoader = LegacyJsonThemeLoader(),
 ) {
     fun load(resourceManager: ResourceManager): ThemeLoadResult = try {
         loadSafely(resourceManager)
@@ -120,14 +122,65 @@ class ThemeResourceLoader(
             val root = location.path.substringBeforeLast('/')
             val name = root.substringAfterLast('/')
             val id = if (name == THEMES_DIRECTORY) null else runCatching { ThemeId(location.namespace, name) }.getOrNull()
+            if (id == null) {
+                issues += ThemeIssue(
+                    ThemeIssueSeverity.ERROR,
+                    location.toString(),
+                    null,
+                    "resource.path",
+                    "Legacy theme must be under themes/<theme-name>/hud.json",
+                )
+                failed++
+                return@forEach
+            }
+            if (location.path.endsWith(".xml")) {
+                issues += ThemeIssue(
+                    ThemeIssueSeverity.ERROR,
+                    location.toString(),
+                    id,
+                    "hud",
+                    "External legacy XML support remains deferred; migrate the bundled theme to modern JSON",
+                )
+                failed++
+                return@forEach
+            }
+            val text = readResource(location, resource, id, issues)
+            if (text == null) {
+                failed++
+                return@forEach
+            }
+            val adaptation = legacyJsonLoader.parseHud(text, id, location.toString()).getOrElse { cause ->
+                issues += ThemeIssue(
+                    ThemeIssueSeverity.ERROR,
+                    location.toString(),
+                    id,
+                    "hud",
+                    "Malformed legacy HUD JSON: ${cause.message}",
+                )
+                failed++
+                return@forEach
+            }
+            issues += adaptation.issues
             issues += ThemeIssue(
-                ThemeIssueSeverity.ERROR,
+                ThemeIssueSeverity.WARNING,
                 location.toString(),
                 id,
                 "metadata",
-                "Legacy metadata-less ${location.path.substringAfterLast('/')} from pack '${resource.sourcePackId()}' was discovered, but its legacy element schema is deferred",
+                "Loaded metadata-less legacy JSON through the resource-reload adapter",
             )
-            failed++
+            definitions += ThemeDefinition(
+                id = id,
+                metadata = ThemeMetadata(
+                    format = ThemeMetadata.LEGACY_ALPHA_FORMAT,
+                    version = adaptation.document.version,
+                    name = "Legacy theme: $name",
+                    authors = listOf("Original MCUI theme authors"),
+                ),
+                document = adaptation.document,
+                metadataResource = location.toString(),
+                hudResource = location.toString(),
+                sourcePack = resource.sourcePackId(),
+            )
         }
 
         val compiler = ThemeCompiler { resourceManager.getResource(it).isPresent }
@@ -172,16 +225,17 @@ class ThemeResourceLoader(
         issues: MutableList<ThemeIssue>,
     ): ThemeDocument? {
         val text = readResource(location, resource, themeId, issues) ?: return null
-        return parser.parseDocument(text).getOrElse { cause ->
+        parser.parseDocument(text).getOrNull()?.let { return it }
+        return legacyJsonLoader.parseHud(text, themeId, location.toString()).getOrElse { cause ->
             issues += ThemeIssue(
                 ThemeIssueSeverity.ERROR,
                 location.toString(),
                 themeId,
                 "hud",
-                "Malformed HUD JSON: ${cause.message}",
+                "Malformed modern or legacy HUD JSON: ${cause.message}",
             )
-            null
-        }
+            return null
+        }.also { issues += it.issues }.document
     }
 
     private fun readResource(

@@ -38,10 +38,18 @@ enum class HudAnchor {
     TOP_LEFT,
     TOP_CENTER,
     TOP_RIGHT,
+    CENTER_LEFT,
     CENTER,
+    CENTER_RIGHT,
     BOTTOM_LEFT,
     BOTTOM_CENTER,
     BOTTOM_RIGHT,
+}
+
+/** Typed non-numeric text inputs kept separate from progress values. */
+@Serializable
+enum class HudTextSource {
+    PLAYER_NAME,
 }
 
 /** Typed numeric inputs. Bars normalize these while text renders their raw value. */
@@ -100,4 +108,10 @@ enum class ProgressDirection {
     RIGHT_TO_LEFT,
     TOP_TO_BOTTOM,
     BOTTOM_TO_TOP,
+}
+
+@Serializable
+enum class HotbarOrientation {
+    HORIZONTAL,
+    VERTICAL,
 }

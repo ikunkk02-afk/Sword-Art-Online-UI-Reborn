@@ -236,7 +236,7 @@ Unknown element types and missing/invalid structural fields invalidate the entir
 
 Discovery, reads, parsing, validation, and compilation populate temporary collections. `ThemeManager.apply` publishes a completed immutable `ThemeSnapshot` through one `AtomicReference.set`. A loader-wide fatal failure rejects the apply and preserves the previous snapshot. Per-theme errors remove that theme from the new snapshot; if the configured active theme is missing or invalid, the snapshot uses a built-in empty root. There is never a partially filled live map.
 
-Development chooses `mcui:development_test`; production chooses `mcui:default`, which can be supplied or overridden by a player pack. If absent, production renders the empty fallback. No debug text is selected for ordinary production users.
+Development chooses `mcui:development_test`; phase five changes production to `mcui:saoui_reborn`. If the preferred production theme is absent or invalid, the manager renders the empty fallback. No debug text is selected for ordinary production users.
 
 ### Phase-three implementation status
 
@@ -275,7 +275,7 @@ Development chooses `mcui:development_test`; production chooses `mcui:default`, 
 
 ## Phase-four HUD composition foundation
 
-Status: **Implemented, awaiting manual user validation.** No client launch, world entry, resource-pack test, screenshot test, key simulation, or automated test execution was performed in this phase.
+Status: **Implemented and manually validated by the user.** Health, food, experience, hotbar, air, mount health, jump, and dynamic HUD updates were confirmed in game. No client launch, world entry, resource-pack test, screenshot test, key simulation, or automated test execution was performed by Codex in this phase.
 
 The runtime data flow is now:
 
@@ -396,6 +396,87 @@ Mount health data, jump data, part visibility, bindings, rendering entries, vani
 The first user screenshots exposed two composition gaps rather than stale cached state: the development theme lacked `MOUNT_HEALTH`, `JUMP_BAR`, and `EFFECTS`, and custom food visibility did not mirror vanilla's mount-health substitution. The follow-up adds those three parts, treats only `LivingEntity.showVehicleHealth()` mounts as mount-health providers, switches FOOD/MOUNT and EXPERIENCE/JUMP every frame from the snapshot, and replaces the overlapping vanilla effect icons with the themed effect list. These corrections are implemented and await another manual user validation pass.
 
 No Lua, LuaJ, MiniScript, JEL, KSP, Koin, XML/xmlutil, CSS/ph-css, Forge/NeoForge, screen replacement, party implementation, or final SAO assets were added.
+
+## Phase-five Legacy SAO Theme Migration
+
+Status: **Implemented; awaiting the user's in-game visual validation.** The phase performs no client launch, world entry, F3+T, screenshot/OCR inspection, temporary resource-pack validation, or new test creation.
+
+### Historical asset and theme findings
+
+The bundled `saoui:sao` theme on `origin/2.0-1.19.4-port` was treated as the authoritative layout. Its source was cross-checked against `origin/1.16.5` and `origin/2.0-1.12-features`.
+
+- The authoritative HUD atlas is `assets/saoui/textures/sao/gui.png`. Its Git blob is `2861065a32a78be2888a54c762a0252949cc3b02` on all three historical branches. Phase five restores that exact blob at the same namespaced resource path; it is not redrawn or sourced externally.
+- The SAO health fragment uses the atlas for a three-piece player-name/health frame, the HP strip at atlas Y 188, the food strip at atlas Y 193, and small HP/level value panels at atlas Y 15.
+- The SAO hotbar uses the 20x20 atlas region at Y 25 and tints it legacy RGBA `CDCDCDAA` for ordinary slots and `FFBA66FF` for the selected slot. The official setting default is a vertical right-side hotbar.
+- The SAO crosshair is a 1x1 atlas dot. The larger cross shape in the old fragment was statically disabled.
+- The official SAO fragment has a level panel but no XP-progress bar asset/layout. Phase five keeps the level panel and adds the existing phase-four plain progress bar as an explicit safe fallback rather than claiming it is historical art.
+- Food and air were embedded inside `HEALTH_BOX`, not separate legacy part entries. They are split into modern `FOOD` and `AIR` parts at the same visual coordinates so per-part vanilla suppression remains correct.
+- No independent `ARMOR` or `MOUNT_HEALTH` visual exists in the official SAO theme. Armor therefore remains Vanilla. Mount health keeps a small phase-four safe fallback.
+- The old jump fragment uses the removed monolithic `minecraft:textures/gui/icons.png` path, not an SAO asset. It remains a simple modern fallback bar on 1.21.1.
+- The old effects fragment is a `RawElement` calling a dynamic `glDraw` expression. No static SAO effect layout can be recovered without the forbidden expression/legacy draw runtime, so Vanilla effects remain enabled.
+- `entities.png` is referenced only by the deferred expression-driven entity-health HUD and is not copied in this phase.
+- The historical HUD uses Minecraft's font renderer. Although old texture trees contain files named `ascii.png`, no bundled SAO HUD font-provider JSON or reusable font configuration was found. The modern theme uses the Minecraft default font; no font file of uncertain provenance was added.
+
+The repository and restored file retain the original GPL-3.0-or-later project licensing and original `saoui` namespace/path. No Google, Pinterest, third-party resource pack, or other external art was used.
+
+### Production resolved theme
+
+The formal theme is `mcui:saoui_reborn`, displayed as `Sword Art Online UI: Reborn`. Production selects it by default; development continues to select `mcui:development_test`, preserving all phase-four diagnostic content without exposing it in the formal theme. Missing or invalid preferred themes still resolve to `mcui:empty` atomically.
+
+The formal theme has no global debug root and no `MCUI HUD Phase 4`, phase label, large diagnostic rectangle, or technical test label.
+
+### Modern element and layout additions
+
+- `TexturedProgressBarElement` stores immutable background/foreground atlas regions, direction, typed `HudValueSource`, dimensions, tint, and clipping policy. The renderer draws the optional background, resolves the normalized value from `HudDataSnapshot`, and clips the full foreground through `GuiRenderOperations`/the existing scissor stack. If clipping is disabled, it crops destination and UV geometry without direct `RenderSystem` access. All four progress directions are supported.
+- `TextureRegionDefinition` and resolved `TextureRegion` centralize texture, UV, source size, atlas size, and ARGB tint for textured bars and hotbar slots.
+- `HotbarElement` now supports horizontal or vertical layout and separate theme-defined ordinary/selected slot regions. Items, counts, durability, and cooldown decoration remain delegated to Minecraft's item renderer.
+- `HudTextSource.PLAYER_NAME` adds the original player-name label without allowing resolved elements to read the player singleton.
+- `HudAnchor` now contains all nine anchors: top/center/bottom crossed with left/center/right. Anchors resolve against `GuiGraphics` logical dimensions; offsets and scale remain logical GUI units.
+- The formal health frame is 302 logical pixels wide at an 8-pixel safe offset; the vertical hotbar is center-right with a 24-pixel right inset; XP/jump fallback bars are bottom-center. No framebuffer-resolution cases are hardcoded.
+
+### Fragment and legacy compatibility architecture
+
+Modern `hud.json` accepts an inline `fragments` map. `fragment_reference` resolves during theme compilation, wraps a newly compiled subtree at each reference transform, and leaves no per-frame registry lookup. Missing fragments are compile errors. A stack of fragment names reports circular chains and stops recursion. Child order, nested groups, transforms, and enabled flags remain intact.
+
+The compatibility boundary is split by responsibility under `themes/legacy/`:
+
+- `LegacyJsonThemeLoader` parses `JsonElement` with kotlinx.serialization; Gson was not reintroduced.
+- `LegacyThemeAdapter` coordinates legacy document/fragment conversion.
+- `LegacyHudAdapter` converts `parts` and keeps unknown names as explicit warnings.
+- `LegacyPartNameMapper` normalizes historical aliases into the modern `HudPartType` enum.
+- `LegacyElementAdapter` converts supported key-discriminator nodes into modern definitions.
+
+Metadata-less `themes/<id>/hud.json` resources now run through this adapter during resource reload, receive synthetic compatibility metadata, then follow the normal `ThemeCompiler -> ResolvedHud` path. Metadata-backed `mcui:alpha` JSON also falls back to the adapter when it is not already modern schema. Conversion never occurs during a HUD frame.
+
+Supported legacy foundations are `Hud`/parts, `ElementGroup`/`Group`, `GLRectangle`, `GLString`, texture/image aliases, `Fragment`, `FragmentReference`, standalone static-slot `GLHotbarItem`, and the standard nine-slot `RepetitionGroup + GLHotbarItem` hotbar pattern. Static numeric, boolean, position, scale, UV, alpha/color, text, and texture values are migrated. Legacy RGBA is explicitly converted to modern ARGB. Recognized health/food/air/XP/jump width expressions become typed progress bindings; recognized player name, level, health, food, air, and armor text expressions become typed text/value sources.
+
+Unknown elements, unknown part names, unsupported repetition patterns, raw draw calls, fragment variables, and dynamic expressions produce resource/theme/field warnings. They are not evaluated. A legacy part with no supported static children is omitted so Vanilla remains available instead of being silently suppressed.
+
+The official bundled XML theme was manually represented as modern JSON because runtime XML would require restoring xmlutil and the legacy object/expression graph. External legacy XML support remains deferred and reports an explicit loader issue. MiniScript/JEL values are limited to static literals and the small recognized typed-binding patterns above; every other expression is deferred with a warning. Koin, KSP, Lua, JEL, MiniScript, CSS, and old GL drawing remain absent.
+
+### Migration matrix
+
+| Status | HUD part | Phase-five result |
+|---|---|---|
+| [x] | Health | Original SAO frame, player name, textured HP strip, and HP/max text panel. Dynamic health-step color changes remain a later enhancement; the original healthy green is the static tint. |
+| [x] | Hotbar | Original SAO 20x20 slot atlas, legacy selected/unselected tints, vertical right layout, and native item/decorations. |
+| [~] | XP | Original SAO level panel plus a phase-four plain progress fallback because the SAO theme defines no historical XP-progress bar. |
+| [x] | Food | Original integrated two-pixel SAO atlas strip, split into the modern `FOOD` part. |
+| [ ] | Armor | No independent official SAO visual found; Vanilla remains enabled. |
+| [x] | Air | Original integrated blue-tinted SAO atlas strip, split into the conditional modern `AIR` part. |
+| [x] | Crosshair | Original 1x1 SAO atlas dot. |
+| [~] | Mount | No official SAO mount-health art found; phase-four simple bar retained. |
+| [~] | Jump | Old theme used a removed vanilla atlas path; phase-four simple bar retained. |
+| [ ] | Effects | Old RawElement/expression renderer is deferred; Vanilla effect icons remain enabled. |
+| [ ] | EntityHealth | Old expression-driven tracking and `entities.png` remain deferred. |
+
+Vanilla suppression logic and the existing single client-only Mixin are unchanged. The formal theme suppresses only `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `FOOD`, `AIR`, `CROSS_HAIR`, `MOUNT_HEALTH`, and `JUMP_BAR`, because only those parts are present. `ARMOR` and `EFFECTS` are absent and therefore stay Vanilla. No Mixin was added in phase five.
+
+### Phase-five compile record
+
+- `\.\gradlew.bat compileKotlin compileClientKotlin --no-daemon --no-parallel` passed after one necessary retry. The first pass found only Mojang's nullable `LocalPlayer.displayName`; capture now falls back to `player.name` when absent.
+- The successful output contains the new main-source legacy adapter classes and client `TexturedProgressBarElement` class.
+- No test task, client launch, world entry, F3+T, screenshot/OCR check, temporary resource pack, or runtime validation was performed.
 
 ### Phase-four compile record
 

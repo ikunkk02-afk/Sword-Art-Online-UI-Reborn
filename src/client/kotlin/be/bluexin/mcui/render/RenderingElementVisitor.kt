@@ -23,8 +23,11 @@ import be.bluexin.mcui.render.element.ItemElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
+import be.bluexin.mcui.render.element.TexturedProgressBarElement
 import be.bluexin.mcui.render.element.TextureElement
+import be.bluexin.mcui.render.element.TextureRegion
 import be.bluexin.mcui.themes.HudAnchor
+import be.bluexin.mcui.themes.HotbarOrientation
 import be.bluexin.mcui.themes.ProgressDirection
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
@@ -100,10 +103,38 @@ class RenderingElementVisitor(
         }
     }
 
+    override fun visit(element: TexturedProgressBarElement, context: RenderContext) = withElement(element, context) {
+        val data = hudData ?: return@withElement
+        element.background?.let { drawTextureRegion(it, 0, 0, element.width, element.height) }
+        val value = HudBindingResolver.progress(element.valueSource, data)
+        if (value <= 0f) return@withElement
+
+        val filledWidth = (element.width * value).roundToInt().coerceIn(0, element.width)
+        val filledHeight = (element.height * value).roundToInt().coerceIn(0, element.height)
+        val clipRect = when (element.direction) {
+            ProgressDirection.LEFT_TO_RIGHT -> ClipRect(0, 0, filledWidth, element.height)
+            ProgressDirection.RIGHT_TO_LEFT -> ClipRect(element.width - filledWidth, 0, filledWidth, element.height)
+            ProgressDirection.TOP_TO_BOTTOM -> ClipRect(0, 0, element.width, filledHeight)
+            ProgressDirection.BOTTOM_TO_TOP -> ClipRect(0, element.height - filledHeight, element.width, filledHeight)
+        }
+        if (element.clip) {
+            operations.enableScissor(clipRect)
+            try {
+                drawTextureRegion(element.foreground, 0, 0, element.width, element.height)
+            } finally {
+                operations.disableScissor()
+            }
+        } else {
+            drawCroppedTextureRegion(element.foreground, element.width, element.height, clipRect)
+        }
+    }
+
     override fun visit(element: DynamicTextElement, context: RenderContext) = withElement(element, context) {
         val data = hudData ?: return@withElement
         operations.text(
-            HudBindingResolver.text(element.valueSource, data),
+            element.textSource?.let { HudBindingResolver.text(it, data) }
+                ?: element.valueSource?.let { HudBindingResolver.text(it, data) }
+                ?: return@withElement,
             0,
             0,
             element.color,
@@ -126,24 +157,29 @@ class RenderingElementVisitor(
     override fun visit(element: HotbarElement, context: RenderContext) = withElement(element, context) {
         val data = hudData ?: return@withElement
         data.hotbarItems.forEachIndexed { index, stack ->
-            val x = index * (element.slotSize + element.slotSpacing)
+            val offset = index * (element.slotSize + element.slotSpacing)
+            val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
+            val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
             val selected = index == data.selectedHotbarSlot
             val selectedColor = element.selectedSlotColor
             val background = element.slotBackgroundColor
 
-            if (selected && selectedColor != null) {
-                operations.fill(x, 0, element.slotSize, element.slotSize, selectedColor)
+            val themedSlot = if (selected) element.selectedSlotTexture ?: element.slotTexture else element.slotTexture
+            if (themedSlot != null) {
+                drawTextureRegion(themedSlot, x, y, element.slotSize, element.slotSize)
+            } else if (selected && selectedColor != null) {
+                operations.fill(x, y, element.slotSize, element.slotSize, selectedColor)
                 if (background != null && element.slotSize > 2) {
-                    operations.fill(x + 1, 1, element.slotSize - 2, element.slotSize - 2, background)
+                    operations.fill(x + 1, y + 1, element.slotSize - 2, element.slotSize - 2, background)
                 }
             } else if (background != null) {
-                operations.fill(x, 0, element.slotSize, element.slotSize, background)
+                operations.fill(x, y, element.slotSize, element.slotSize, background)
             }
 
             operations.item(
                 stack,
                 x + element.itemXOffset,
-                element.itemYOffset,
+                y + element.itemYOffset,
                 element.decorations,
             )
         }
@@ -195,13 +231,13 @@ class RenderingElementVisitor(
         try {
             val transform = element.transform
             val anchorX = when (transform.anchor) {
-                HudAnchor.TOP_LEFT, HudAnchor.BOTTOM_LEFT -> 0f
+                HudAnchor.TOP_LEFT, HudAnchor.CENTER_LEFT, HudAnchor.BOTTOM_LEFT -> 0f
                 HudAnchor.TOP_CENTER, HudAnchor.CENTER, HudAnchor.BOTTOM_CENTER -> context.guiWidth / 2f
-                HudAnchor.TOP_RIGHT, HudAnchor.BOTTOM_RIGHT -> context.guiWidth.toFloat()
+                HudAnchor.TOP_RIGHT, HudAnchor.CENTER_RIGHT, HudAnchor.BOTTOM_RIGHT -> context.guiWidth.toFloat()
             }
             val anchorY = when (transform.anchor) {
                 HudAnchor.TOP_LEFT, HudAnchor.TOP_CENTER, HudAnchor.TOP_RIGHT -> 0f
-                HudAnchor.CENTER -> context.guiHeight / 2f
+                HudAnchor.CENTER_LEFT, HudAnchor.CENTER, HudAnchor.CENTER_RIGHT -> context.guiHeight / 2f
                 HudAnchor.BOTTOM_LEFT, HudAnchor.BOTTOM_CENTER, HudAnchor.BOTTOM_RIGHT -> context.guiHeight.toFloat()
             }
             operations.translate(anchorX + transform.x, anchorY + transform.y, transform.z)
@@ -221,6 +257,45 @@ class RenderingElementVisitor(
         } finally {
             operations.popTransform()
         }
+    }
+
+    private fun drawTextureRegion(region: TextureRegion, x: Int, y: Int, width: Int, height: Int) {
+        operations.texture(
+            texture = region.texture,
+            x = x,
+            y = y,
+            width = width,
+            height = height,
+            u = region.u,
+            v = region.v,
+            sourceWidth = region.sourceWidth,
+            sourceHeight = region.sourceHeight,
+            textureWidth = region.textureWidth,
+            textureHeight = region.textureHeight,
+            tint = region.tint,
+        )
+    }
+
+    private fun drawCroppedTextureRegion(region: TextureRegion, width: Int, height: Int, crop: ClipRect) {
+        if (crop.width <= 0 || crop.height <= 0) return
+        val uOffset = region.sourceWidth * (crop.x.toFloat() / width)
+        val vOffset = region.sourceHeight * (crop.y.toFloat() / height)
+        val sourceWidth = (region.sourceWidth * (crop.width.toFloat() / width)).roundToInt().coerceAtLeast(1)
+        val sourceHeight = (region.sourceHeight * (crop.height.toFloat() / height)).roundToInt().coerceAtLeast(1)
+        operations.texture(
+            texture = region.texture,
+            x = crop.x,
+            y = crop.y,
+            width = crop.width,
+            height = crop.height,
+            u = region.u + uOffset,
+            v = region.v + vOffset,
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+            textureWidth = region.textureWidth,
+            textureHeight = region.textureHeight,
+            tint = region.tint,
+        )
     }
 
     private fun effectTexture(effect: HudEffectSnapshot): ResourceLocation = ResourceLocation.fromNamespaceAndPath(

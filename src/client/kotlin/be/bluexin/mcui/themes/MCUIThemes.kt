@@ -13,7 +13,7 @@ import net.fabricmc.loader.api.FabricLoader
 
 object MCUIThemes {
     val DEVELOPMENT_THEME_ID = ThemeId("mcui", "development_test")
-    val DEFAULT_THEME_ID = ThemeId("mcui", "default")
+    val DEFAULT_THEME_ID = ThemeId("mcui", "saoui_reborn")
 
     val manager = ThemeManager(
         preferredTheme = if (FabricLoader.getInstance().isDevelopmentEnvironment) {

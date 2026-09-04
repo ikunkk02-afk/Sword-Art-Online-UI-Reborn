@@ -21,7 +21,9 @@ import be.bluexin.mcui.render.element.HudItemElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
+import be.bluexin.mcui.render.element.TexturedProgressBarElement
 import be.bluexin.mcui.render.element.TextureElement
+import be.bluexin.mcui.render.element.TextureRegion
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 
@@ -36,12 +38,19 @@ class ThemeCompiler(
     fun compile(definition: ThemeDefinition): ThemeCompileResult {
         val issues = mutableListOf<ThemeIssue>()
         validateMetadata(definition, issues)
+        definition.document.fragments.forEach { (name, fragment) ->
+            if (name.isBlank()) {
+                issues.error(definition, "fragments", "Fragment names must not be blank")
+            } else {
+                compileElement(definition, fragment, "fragments.$name", issues, listOf(name))
+            }
+        }
         val compiledRoot = definition.document.root?.let {
-            compileElement(definition, it, "root", issues)
+            compileElement(definition, it, "root", issues, emptyList())
         }
         val compiledParts = linkedMapOf<HudPartType, Element>()
         definition.document.parts.forEach { (part, element) ->
-            compileElement(definition, element, "parts.$part", issues)?.let {
+            compileElement(definition, element, "parts.$part", issues, emptyList())?.let {
                 compiledParts[part] = it
             }
         }
@@ -132,16 +141,27 @@ class ThemeCompiler(
         element: ElementDefinition,
         path: String,
         issues: MutableList<ThemeIssue>,
+        fragmentStack: List<String>,
     ): Element? {
         val transform = compileTransform(definition, element.transform, "$path.transform", issues) ?: return null
         val state = ResolvedRenderState(enabled = element.enabled, name = element.name ?: path)
         return when (element.type.lowercase()) {
             "group" -> {
                 val children = element.children.mapIndexedNotNull { index, child ->
-                    compileElement(definition, child, "$path.children[$index]", issues)
+                    compileElement(definition, child, "$path.children[$index]", issues, fragmentStack)
                 }
                 GroupElement(state, transform, children)
             }
+
+            "fragment_reference", "fragment", "reference" -> compileFragmentReference(
+                definition,
+                element,
+                path,
+                state,
+                transform,
+                issues,
+                fragmentStack,
+            )
 
             "rectangle" -> {
                 val width = positiveDimension(definition, element.width, "$path.width", issues)
@@ -157,9 +177,11 @@ class ThemeCompiler(
             "text" -> {
                 val text = element.text
                 val valueSource = element.valueSource
+                val textSource = element.textSource
+                val sourceCount = listOfNotNull(text, valueSource, textSource).size
                 when {
-                    text != null && valueSource != null -> {
-                        issues.error(definition, path, "Text must define exactly one of text or valueSource")
+                    sourceCount != 1 -> {
+                        issues.error(definition, path, "Text must define exactly one of text, valueSource, or textSource")
                         null
                     }
 
@@ -181,8 +203,17 @@ class ThemeCompiler(
                         centered = element.centered,
                     )
 
+                    textSource != null -> DynamicTextElement(
+                        renderState = state,
+                        transform = transform,
+                        textSource = textSource,
+                        color = ArgbColor((element.color ?: ArgbColorDefinition.WHITE).value),
+                        shadow = element.shadow,
+                        centered = element.centered,
+                    )
+
                     else -> {
-                        issues.error(definition, path, "Text must define text or valueSource")
+                        issues.error(definition, path, "Text must define a source")
                         null
                     }
                 }
@@ -190,6 +221,14 @@ class ThemeCompiler(
 
             "texture" -> compileTexture(definition, element, path, state, transform, issues)
             "progress", "progress_bar", "bar" -> compileProgressBar(
+                definition,
+                element,
+                path,
+                state,
+                transform,
+                issues,
+            )
+            "textured_progress", "textured_progress_bar", "texture_bar" -> compileTexturedProgressBar(
                 definition,
                 element,
                 path,
@@ -253,6 +292,88 @@ class ThemeCompiler(
         )
     }
 
+    private fun compileTexturedProgressBar(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        val width = positiveDimension(definition, element.width, "$path.width", issues)
+        val height = positiveDimension(definition, element.height, "$path.height", issues)
+        val foregroundDefinition = element.foregroundTexture ?: run {
+            issues.error(definition, "$path.foregroundTexture", "Textured progress foregroundTexture is required")
+            null
+        }
+        val source = element.valueSource ?: run {
+            issues.error(definition, "$path.valueSource", "Textured progress valueSource is required")
+            null
+        }
+        if (width == null || height == null || foregroundDefinition == null || source == null) return null
+        val foreground = compileTextureRegion(
+            definition,
+            foregroundDefinition,
+            "$path.foregroundTexture",
+            width,
+            height,
+            issues,
+        ) ?: return null
+        val background = element.backgroundTexture?.let {
+            compileTextureRegion(definition, it, "$path.backgroundTexture", width, height, issues)
+        }
+        return TexturedProgressBarElement(
+            renderState = state,
+            transform = transform,
+            width = width,
+            height = height,
+            background = background,
+            foreground = foreground,
+            direction = element.direction,
+            valueSource = source,
+            clip = element.clip,
+        )
+    }
+
+    private fun compileFragmentReference(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+        fragmentStack: List<String>,
+    ): Element? {
+        val requested = element.fragment?.trim().orEmpty()
+        if (requested.isEmpty()) {
+            issues.error(definition, "$path.fragment", "Fragment reference is required")
+            return null
+        }
+        val key = when {
+            requested in definition.document.fragments -> requested
+            requested.substringAfterLast(':') in definition.document.fragments -> requested.substringAfterLast(':')
+            else -> requested
+        }
+        val fragment = definition.document.fragments[key]
+        if (fragment == null) {
+            issues.error(definition, "$path.fragment", "Missing fragment '$requested'")
+            return null
+        }
+        if (key in fragmentStack) {
+            val cycle = (fragmentStack + key).joinToString(" -> ")
+            issues.error(definition, "$path.fragment", "Circular fragment reference: $cycle")
+            return null
+        }
+        val resolved = compileElement(
+            definition,
+            fragment,
+            "fragments.$key",
+            issues,
+            fragmentStack + key,
+        ) ?: return null
+        return GroupElement(state, transform, listOf(resolved))
+    }
+
     private fun compileHotbar(
         definition: ThemeDefinition,
         element: ElementDefinition,
@@ -278,6 +399,20 @@ class ThemeCompiler(
             itemYOffset = element.itemYOffset,
             slotBackgroundColor = element.slotBackgroundColor?.let { ArgbColor(it.value) },
             selectedSlotColor = element.selectedSlotColor?.let { ArgbColor(it.value) },
+            slotTexture = element.slotTexture?.let {
+                compileTextureRegion(definition, it, "$path.slotTexture", element.slotSize, element.slotSize, issues)
+            },
+            selectedSlotTexture = element.selectedSlotTexture?.let {
+                compileTextureRegion(
+                    definition,
+                    it,
+                    "$path.selectedSlotTexture",
+                    element.slotSize,
+                    element.slotSize,
+                    issues,
+                )
+            },
+            orientation = element.orientation,
             decorations = element.decorations,
         )
     }
@@ -385,6 +520,54 @@ class ThemeCompiler(
             textureWidth = textureWidth,
             textureHeight = textureHeight,
             tint = ArgbColor((element.tint ?: ArgbColorDefinition.WHITE).value),
+        )
+    }
+
+    private fun compileTextureRegion(
+        definition: ThemeDefinition,
+        region: TextureRegionDefinition,
+        path: String,
+        defaultWidth: Int,
+        defaultHeight: Int,
+        issues: MutableList<ThemeIssue>,
+    ): TextureRegion? {
+        val texture = ResourceLocation.tryParse(region.texture)
+        if (texture == null) {
+            issues.error(definition, "$path.texture", "Invalid ResourceLocation '${region.texture}'")
+            return null
+        }
+        val sourceWidth = positiveDimension(
+            definition,
+            region.sourceWidth ?: defaultWidth,
+            "$path.sourceWidth",
+            issues,
+        ) ?: return null
+        val sourceHeight = positiveDimension(
+            definition,
+            region.sourceHeight ?: defaultHeight,
+            "$path.sourceHeight",
+            issues,
+        ) ?: return null
+        if (region.textureWidth <= 0 || region.textureHeight <= 0) {
+            issues.error(definition, path, "Texture atlas dimensions must be greater than zero")
+            return null
+        }
+        if (!region.u.isFinite() || !region.v.isFinite()) {
+            issues.error(definition, path, "Texture coordinates must be finite")
+            return null
+        }
+        if (!textureExists(texture)) {
+            issues.warning(definition, "$path.texture", "Texture '$texture' does not exist in the active resource stack")
+        }
+        return TextureRegion(
+            texture = texture,
+            u = region.u.toFloat(),
+            v = region.v.toFloat(),
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+            textureWidth = region.textureWidth,
+            textureHeight = region.textureHeight,
+            tint = ArgbColor(region.tint.value),
         )
     }
 

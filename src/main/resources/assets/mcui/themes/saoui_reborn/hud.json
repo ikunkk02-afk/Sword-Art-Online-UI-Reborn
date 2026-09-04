@@ -1,0 +1,324 @@
+{
+  "version": "5",
+  "fragments": {
+    "health_frame": {
+      "type": "group",
+      "name": "sao_health_frame",
+      "children": [
+        {
+          "type": "texture",
+          "width": 16,
+          "height": 15,
+          "texture": "saoui:textures/sao/gui.png",
+          "u": 0,
+          "v": 0,
+          "sourceWidth": 16,
+          "sourceHeight": 15,
+          "textureWidth": 256,
+          "textureHeight": 256
+        },
+        {
+          "type": "texture",
+          "transform": { "x": 16 },
+          "width": 52,
+          "height": 15,
+          "texture": "saoui:textures/sao/gui.png",
+          "u": 16,
+          "v": 0,
+          "sourceWidth": 5,
+          "sourceHeight": 15,
+          "textureWidth": 256,
+          "textureHeight": 256
+        },
+        {
+          "type": "texture",
+          "transform": { "x": 68 },
+          "width": 234,
+          "height": 15,
+          "texture": "saoui:textures/sao/gui.png",
+          "u": 21,
+          "v": 0,
+          "sourceWidth": 234,
+          "sourceHeight": 15,
+          "textureWidth": 256,
+          "textureHeight": 256
+        }
+      ]
+    },
+    "panel_left_cap": {
+      "type": "texture",
+      "width": 5,
+      "height": 13,
+      "texture": "saoui:textures/sao/gui.png",
+      "u": 60,
+      "v": 15,
+      "sourceWidth": 5,
+      "sourceHeight": 13,
+      "textureWidth": 256,
+      "textureHeight": 256
+    },
+    "panel_right_cap": {
+      "type": "texture",
+      "width": 5,
+      "height": 13,
+      "texture": "saoui:textures/sao/gui.png",
+      "u": 70,
+      "v": 15,
+      "sourceWidth": 5,
+      "sourceHeight": 13,
+      "textureWidth": 256,
+      "textureHeight": 256
+    }
+  },
+  "parts": {
+    "HEALTH_BOX": {
+      "type": "group",
+      "name": "sao_health_box",
+      "transform": { "x": 8, "y": 8, "z": 1, "anchor": "TOP_LEFT" },
+      "children": [
+        {
+          "type": "fragment_reference",
+          "fragment": "health_frame"
+        },
+        {
+          "type": "text",
+          "name": "player_name",
+          "transform": { "x": 14, "y": 3, "z": 2 },
+          "textSource": "PLAYER_NAME",
+          "color": "#FFFFFFFF",
+          "shadow": true
+        },
+        {
+          "type": "textured_progress_bar",
+          "name": "health_bar",
+          "transform": { "x": 70, "y": 3, "z": 2 },
+          "width": 215,
+          "height": 9,
+          "valueSource": "PLAYER_HEALTH",
+          "direction": "LEFT_TO_RIGHT",
+          "clip": true,
+          "foregroundTexture": {
+            "texture": "saoui:textures/sao/gui.png",
+            "u": 0,
+            "v": 188,
+            "sourceWidth": 215,
+            "sourceHeight": 9,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "tint": "#FF93F43E"
+          }
+        },
+        {
+          "type": "group",
+          "name": "health_value_panel",
+          "transform": { "x": 184, "y": 12, "z": 3 },
+          "children": [
+            { "type": "fragment_reference", "fragment": "panel_left_cap" },
+            {
+              "type": "texture",
+              "transform": { "x": 5 },
+              "width": 64,
+              "height": 13,
+              "texture": "saoui:textures/sao/gui.png",
+              "u": 66,
+              "v": 15,
+              "sourceWidth": 5,
+              "sourceHeight": 13,
+              "textureWidth": 256,
+              "textureHeight": 256
+            },
+            {
+              "type": "fragment_reference",
+              "transform": { "x": 69 },
+              "fragment": "panel_right_cap"
+            },
+            {
+              "type": "text",
+              "transform": { "x": 20, "y": 2, "z": 2 },
+              "valueSource": "PLAYER_HEALTH",
+              "color": "#FFFFFFFF",
+              "shadow": true,
+              "centered": true
+            },
+            {
+              "type": "text",
+              "transform": { "x": 36, "y": 2, "z": 2 },
+              "text": "/",
+              "color": "#FFFFFFFF",
+              "shadow": true,
+              "centered": true
+            },
+            {
+              "type": "text",
+              "transform": { "x": 52, "y": 2, "z": 2 },
+              "valueSource": "PLAYER_MAX_HEALTH",
+              "color": "#FFFFFFFF",
+              "shadow": true,
+              "centered": true
+            }
+          ]
+        }
+      ]
+    },
+    "FOOD": {
+      "type": "textured_progress_bar",
+      "name": "sao_food_bar",
+      "transform": { "x": 78, "y": 18, "z": 4, "anchor": "TOP_LEFT" },
+      "width": 113,
+      "height": 2,
+      "valueSource": "FOOD",
+      "clip": true,
+      "foregroundTexture": {
+        "texture": "saoui:textures/sao/gui.png",
+        "u": 0,
+        "v": 193,
+        "sourceWidth": 115,
+        "sourceHeight": 2,
+        "textureWidth": 256,
+        "textureHeight": 256,
+        "tint": "#FFF5AB2A"
+      }
+    },
+    "AIR": {
+      "type": "textured_progress_bar",
+      "name": "sao_air_bar",
+      "transform": { "x": 78, "y": 11, "z": 5, "anchor": "TOP_LEFT" },
+      "width": 215,
+      "height": 9,
+      "valueSource": "AIR",
+      "clip": true,
+      "foregroundTexture": {
+        "texture": "saoui:textures/sao/gui.png",
+        "u": 0,
+        "v": 188,
+        "sourceWidth": 215,
+        "sourceHeight": 9,
+        "textureWidth": 256,
+        "textureHeight": 256,
+        "tint": "#802ADDF5"
+      }
+    },
+    "EXPERIENCE": {
+      "type": "group",
+      "name": "sao_experience",
+      "children": [
+        {
+          "type": "progress_bar",
+          "name": "experience_progress_fallback",
+          "transform": { "x": -91, "y": -30, "z": 1, "anchor": "BOTTOM_CENTER" },
+          "width": 182,
+          "height": 3,
+          "backgroundColor": "#B018241B",
+          "foregroundColor": "#FF80FF98",
+          "valueSource": "EXPERIENCE_PROGRESS"
+        },
+        {
+          "type": "group",
+          "name": "sao_level_panel",
+          "transform": { "x": 270, "y": 20, "z": 3, "anchor": "TOP_LEFT" },
+          "children": [
+            { "type": "fragment_reference", "fragment": "panel_left_cap" },
+            {
+              "type": "texture",
+              "transform": { "x": 5 },
+              "width": 32,
+              "height": 13,
+              "texture": "saoui:textures/sao/gui.png",
+              "u": 66,
+              "v": 15,
+              "sourceWidth": 5,
+              "sourceHeight": 13,
+              "textureWidth": 256,
+              "textureHeight": 256
+            },
+            {
+              "type": "fragment_reference",
+              "transform": { "x": 37 },
+              "fragment": "panel_right_cap"
+            },
+            {
+              "type": "text",
+              "transform": { "x": 8, "y": 2, "z": 2 },
+              "text": "Lv",
+              "color": "#FFFFFFFF",
+              "shadow": true
+            },
+            {
+              "type": "text",
+              "transform": { "x": 29, "y": 2, "z": 2 },
+              "valueSource": "EXPERIENCE_LEVEL",
+              "color": "#FFFFFFFF",
+              "shadow": true,
+              "centered": true
+            }
+          ]
+        }
+      ]
+    },
+    "HOTBAR": {
+      "type": "hotbar",
+      "name": "sao_vertical_hotbar",
+      "transform": { "x": -24, "y": -99, "z": 3, "anchor": "CENTER_RIGHT" },
+      "orientation": "VERTICAL",
+      "slotSize": 20,
+      "slotSpacing": 2,
+      "itemXOffset": 2,
+      "itemYOffset": 2,
+      "decorations": true,
+      "slotTexture": {
+        "texture": "saoui:textures/sao/gui.png",
+        "u": 0,
+        "v": 25,
+        "sourceWidth": 20,
+        "sourceHeight": 20,
+        "textureWidth": 256,
+        "textureHeight": 256,
+        "tint": "#AACDCDCD"
+      },
+      "selectedSlotTexture": {
+        "texture": "saoui:textures/sao/gui.png",
+        "u": 0,
+        "v": 25,
+        "sourceWidth": 20,
+        "sourceHeight": 20,
+        "textureWidth": 256,
+        "textureHeight": 256,
+        "tint": "#FFFFBA66"
+      }
+    },
+    "CROSS_HAIR": {
+      "type": "texture",
+      "name": "sao_dot_crosshair",
+      "transform": { "x": 0, "y": 0, "z": 10, "anchor": "CENTER" },
+      "width": 1,
+      "height": 1,
+      "texture": "saoui:textures/sao/gui.png",
+      "u": 0,
+      "v": 0,
+      "sourceWidth": 1,
+      "sourceHeight": 1,
+      "textureWidth": 256,
+      "textureHeight": 256
+    },
+    "MOUNT_HEALTH": {
+      "type": "progress_bar",
+      "name": "mount_health_safe_fallback",
+      "transform": { "x": -128, "y": 8, "z": 1, "anchor": "TOP_RIGHT" },
+      "width": 120,
+      "height": 5,
+      "backgroundColor": "#B0351B28",
+      "foregroundColor": "#FFE05C91",
+      "valueSource": "MOUNT_HEALTH"
+    },
+    "JUMP_BAR": {
+      "type": "progress_bar",
+      "name": "jump_bar_safe_fallback",
+      "transform": { "x": -91, "y": -30, "z": 1, "anchor": "BOTTOM_CENTER" },
+      "width": 182,
+      "height": 5,
+      "backgroundColor": "#FF293443",
+      "foregroundColor": "#FF55B8FF",
+      "valueSource": "JUMP_PROGRESS"
+    }
+  }
+}

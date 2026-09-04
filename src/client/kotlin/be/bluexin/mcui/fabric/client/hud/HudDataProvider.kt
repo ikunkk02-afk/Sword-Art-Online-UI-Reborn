@@ -54,6 +54,7 @@ class HudDataProvider {
         val maxAir = player.maxAirSupply.coerceAtLeast(1)
 
         return HudDataSnapshot(
+            playerName = player.displayName?.string ?: player.name.string,
             playerHealth = player.health,
             playerMaxHealth = player.maxHealth.coerceAtLeast(1f),
             playerAbsorption = player.absorptionAmount,

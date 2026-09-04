@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack
 
 /** Immutable, per-frame values consumed by HUD elements. No live player/world object is retained. */
 data class HudDataSnapshot(
+    val playerName: String,
     val playerHealth: Float,
     val playerMaxHealth: Float,
     val playerAbsorption: Float,

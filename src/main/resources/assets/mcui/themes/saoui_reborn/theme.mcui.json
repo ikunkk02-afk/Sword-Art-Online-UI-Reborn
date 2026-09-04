@@ -1,0 +1,13 @@
+{
+  "format": "mcui:resolved-v1",
+  "version": "5.0.0",
+  "id": "mcui:saoui_reborn",
+  "name": "Sword Art Online UI: Reborn",
+  "authors": [
+    "Bluexin",
+    "Tencao",
+    "Sword Art Online UI: Reborn contributors"
+  ],
+  "description": "Modern resolved HUD migrated from the bundled SAO theme and original repository assets.",
+  "namespace": "saoui"
+}

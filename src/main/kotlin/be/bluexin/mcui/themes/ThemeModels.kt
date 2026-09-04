@@ -72,6 +72,8 @@ data class ThemeDocument(
     val root: ElementDefinition? = null,
     /** Historical HUD part names with the phase-four resolved element schema. */
     val parts: Map<HudPartType, ElementDefinition> = emptyMap(),
+    /** Reusable subtrees resolved and instantiated during resource reload. */
+    val fragments: Map<String, ElementDefinition> = emptyMap(),
 )
 
 @Serializable
@@ -81,6 +83,19 @@ data class TransformDefinition(
     val z: Double = 0.0,
     val scale: Double = 1.0,
     val anchor: HudAnchor = HudAnchor.TOP_LEFT,
+)
+
+/** A texture atlas region shared by textures, textured bars, and themed hotbar slots. */
+@Serializable
+data class TextureRegionDefinition(
+    val texture: String,
+    val u: Double = 0.0,
+    val v: Double = 0.0,
+    val sourceWidth: Int? = null,
+    val sourceHeight: Int? = null,
+    val textureWidth: Int = 256,
+    val textureHeight: Int = 256,
+    val tint: ArgbColorDefinition = ArgbColorDefinition.WHITE,
 )
 
 /**
@@ -94,6 +109,7 @@ data class ElementDefinition(
     val enabled: Boolean = true,
     val transform: TransformDefinition = TransformDefinition(),
     val children: List<ElementDefinition> = emptyList(),
+    val fragment: String? = null,
     val width: Int? = null,
     val height: Int? = null,
     val color: ArgbColorDefinition? = null,
@@ -112,6 +128,10 @@ data class ElementDefinition(
     val backgroundColor: ArgbColorDefinition? = null,
     val foregroundColor: ArgbColorDefinition? = null,
     val direction: ProgressDirection = ProgressDirection.LEFT_TO_RIGHT,
+    val backgroundTexture: TextureRegionDefinition? = null,
+    val foregroundTexture: TextureRegionDefinition? = null,
+    val clip: Boolean = true,
+    val textSource: HudTextSource? = null,
     val itemSource: HudItemSource? = null,
     val slotSize: Int = 20,
     val slotSpacing: Int = 0,
@@ -119,6 +139,9 @@ data class ElementDefinition(
     val itemYOffset: Int = 2,
     val slotBackgroundColor: ArgbColorDefinition? = null,
     val selectedSlotColor: ArgbColorDefinition? = null,
+    val slotTexture: TextureRegionDefinition? = null,
+    val selectedSlotTexture: TextureRegionDefinition? = null,
+    val orientation: HotbarOrientation = HotbarOrientation.HORIZONTAL,
     val decorations: Boolean = true,
     val effectRowHeight: Int = 22,
     val maxEffects: Int = 8,

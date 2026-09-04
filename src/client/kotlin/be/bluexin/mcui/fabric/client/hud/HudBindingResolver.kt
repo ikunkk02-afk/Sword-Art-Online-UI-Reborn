@@ -10,6 +10,7 @@
 package be.bluexin.mcui.fabric.client.hud
 
 import be.bluexin.mcui.themes.HudItemSource
+import be.bluexin.mcui.themes.HudTextSource
 import be.bluexin.mcui.themes.HudValueSource
 import net.minecraft.world.item.ItemStack
 import java.util.Locale
@@ -18,6 +19,10 @@ import kotlin.math.roundToInt
 
 /** Type-safe bindings used by dynamic HUD elements; no expression engine is involved. */
 object HudBindingResolver {
+    fun text(source: HudTextSource, data: HudDataSnapshot): String = when (source) {
+        HudTextSource.PLAYER_NAME -> data.playerName
+    }
+
     fun progress(source: HudValueSource, data: HudDataSnapshot): Float = when (source) {
         HudValueSource.PLAYER_HEALTH -> ratio(data.playerHealth, data.playerMaxHealth)
         HudValueSource.PLAYER_MAX_HEALTH -> if (data.playerMaxHealth > 0f) 1f else 0f

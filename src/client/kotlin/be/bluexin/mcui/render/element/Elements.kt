@@ -14,6 +14,8 @@ import be.bluexin.mcui.render.RenderContext
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
 import be.bluexin.mcui.themes.HudItemSource
+import be.bluexin.mcui.themes.HotbarOrientation
+import be.bluexin.mcui.themes.HudTextSource
 import be.bluexin.mcui.themes.HudValueSource
 import be.bluexin.mcui.themes.ProgressDirection
 import net.minecraft.network.chat.Component
@@ -33,6 +35,7 @@ interface ElementVisitor {
     fun visit(element: TextureElement, context: RenderContext)
     fun visit(element: ItemElement, context: RenderContext)
     fun visit(element: ProgressBarElement, context: RenderContext)
+    fun visit(element: TexturedProgressBarElement, context: RenderContext)
     fun visit(element: DynamicTextElement, context: RenderContext)
     fun visit(element: HudItemElement, context: RenderContext)
     fun visit(element: HotbarElement, context: RenderContext)
@@ -85,6 +88,17 @@ data class TextureElement(
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
 
+data class TextureRegion(
+    val texture: ResourceLocation,
+    val u: Float,
+    val v: Float,
+    val sourceWidth: Int,
+    val sourceHeight: Int,
+    val textureWidth: Int,
+    val textureHeight: Int,
+    val tint: ArgbColor = ArgbColor.WHITE,
+)
+
 data class ItemElement(
     override val renderState: ResolvedRenderState = ResolvedRenderState(),
     override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
@@ -108,10 +122,26 @@ data class ProgressBarElement(
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
 
+/** A HUD value rendered by clipping or cropping one immutable texture region. */
+data class TexturedProgressBarElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val width: Int,
+    val height: Int,
+    val background: TextureRegion?,
+    val foreground: TextureRegion,
+    val direction: ProgressDirection,
+    val valueSource: HudValueSource,
+    val clip: Boolean,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
 data class DynamicTextElement(
     override val renderState: ResolvedRenderState = ResolvedRenderState(),
     override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
-    val valueSource: HudValueSource,
+    val valueSource: HudValueSource? = null,
+    val textSource: HudTextSource? = null,
     val color: ArgbColor = ArgbColor.WHITE,
     val shadow: Boolean = false,
     val centered: Boolean = false,
@@ -138,6 +168,9 @@ data class HotbarElement(
     val itemYOffset: Int,
     val slotBackgroundColor: ArgbColor?,
     val selectedSlotColor: ArgbColor?,
+    val slotTexture: TextureRegion?,
+    val selectedSlotTexture: TextureRegion?,
+    val orientation: HotbarOrientation,
     val decorations: Boolean,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
