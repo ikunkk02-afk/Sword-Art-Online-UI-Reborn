@@ -9,17 +9,11 @@
 
 package be.bluexin.mcui.themes
 
-import net.fabricmc.loader.api.FabricLoader
-
 object MCUIThemes {
     val DEVELOPMENT_THEME_ID = ThemeId("mcui", "development_test")
     val DEFAULT_THEME_ID = ThemeId("mcui", "saoui_reborn")
 
     val manager = ThemeManager(
-        preferredTheme = if (FabricLoader.getInstance().isDevelopmentEnvironment) {
-            DEVELOPMENT_THEME_ID
-        } else {
-            DEFAULT_THEME_ID
-        },
+        preferredTheme = DEFAULT_THEME_ID,
     )
 }
