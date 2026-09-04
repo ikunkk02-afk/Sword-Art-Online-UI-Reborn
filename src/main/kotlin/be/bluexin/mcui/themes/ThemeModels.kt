@@ -120,6 +120,12 @@ data class ElementDefinition(
     val slotBackgroundColor: ArgbColorDefinition? = null,
     val selectedSlotColor: ArgbColorDefinition? = null,
     val decorations: Boolean = true,
+    val effectRowHeight: Int = 22,
+    val maxEffects: Int = 8,
+    val beneficialColor: ArgbColorDefinition? = null,
+    val harmfulColor: ArgbColorDefinition? = null,
+    val showEffectDuration: Boolean = true,
+    val showEffectIcons: Boolean = true,
 )
 
 data class ThemeDefinition(

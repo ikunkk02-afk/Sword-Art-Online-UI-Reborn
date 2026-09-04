@@ -14,8 +14,9 @@ import be.bluexin.mcui.themes.HudPartType
 object HudPartVisibility {
     fun isVisible(part: HudPartType, data: HudDataSnapshot): Boolean = when (part) {
         HudPartType.HEALTH_BOX,
-        HudPartType.ARMOR,
-        HudPartType.FOOD -> data.survivalHud && !data.spectator && !data.dead
+        HudPartType.ARMOR -> data.survivalHud && !data.spectator && !data.dead
+
+        HudPartType.FOOD -> data.survivalHud && !data.spectator && !data.dead && !data.hasLivingMount
 
         HudPartType.AIR -> data.survivalHud && !data.spectator && !data.dead &&
             (data.underwater || data.air < data.maxAir)

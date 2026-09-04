@@ -14,6 +14,7 @@ import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
 import be.bluexin.mcui.render.element.DynamicTextElement
 import be.bluexin.mcui.render.element.Element
+import be.bluexin.mcui.render.element.EffectListElement
 import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
 import be.bluexin.mcui.render.element.HudItemElement
@@ -213,6 +214,7 @@ class ThemeCompiler(
             }
 
             "hotbar" -> compileHotbar(definition, element, path, state, transform, issues)
+            "effects", "effect_list" -> compileEffectList(definition, element, path, state, transform, issues)
             else -> {
                 issues.error(definition, "$path.type", "Unknown element type '${element.type}'")
                 null
@@ -277,6 +279,46 @@ class ThemeCompiler(
             slotBackgroundColor = element.slotBackgroundColor?.let { ArgbColor(it.value) },
             selectedSlotColor = element.selectedSlotColor?.let { ArgbColor(it.value) },
             decorations = element.decorations,
+        )
+    }
+
+    private fun compileEffectList(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        val width = positiveDimension(definition, element.width, "$path.width", issues) ?: return null
+        if (element.effectRowHeight <= 0) {
+            issues.error(definition, "$path.effectRowHeight", "Effect row height must be greater than zero")
+            return null
+        }
+        if (element.showEffectIcons && element.effectRowHeight < EFFECT_ICON_SIZE) {
+            issues.error(
+                definition,
+                "$path.effectRowHeight",
+                "Effect row height must be at least $EFFECT_ICON_SIZE when icons are enabled",
+            )
+            return null
+        }
+        if (element.maxEffects <= 0) {
+            issues.error(definition, "$path.maxEffects", "Effect maxEffects must be greater than zero")
+            return null
+        }
+        return EffectListElement(
+            renderState = state,
+            transform = transform,
+            width = width,
+            rowHeight = element.effectRowHeight,
+            maxEffects = element.maxEffects,
+            backgroundColor = element.backgroundColor?.let { ArgbColor(it.value) },
+            textColor = ArgbColor((element.foregroundColor ?: ArgbColorDefinition.WHITE).value),
+            beneficialColor = ArgbColor(element.beneficialColor?.value ?: DEFAULT_BENEFICIAL_COLOR),
+            harmfulColor = ArgbColor(element.harmfulColor?.value ?: DEFAULT_HARMFUL_COLOR),
+            showDuration = element.showEffectDuration,
+            showIcons = element.showEffectIcons,
         )
     }
 
@@ -417,6 +459,9 @@ class ThemeCompiler(
     }
 
     companion object {
+        private const val EFFECT_ICON_SIZE = 18
+        private const val DEFAULT_BENEFICIAL_COLOR = -11141291
+        private const val DEFAULT_HARMFUL_COLOR = -43691
         private val SUPPORTED_FORMATS = setOf(
             ThemeMetadata.RESOLVED_V1_FORMAT,
             ThemeMetadata.LEGACY_ALPHA_FORMAT,

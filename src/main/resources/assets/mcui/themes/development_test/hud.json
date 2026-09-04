@@ -132,6 +132,73 @@
       "selectedSlotColor": "#FFFFC857",
       "decorations": true
     },
+    "MOUNT_HEALTH": {
+      "type": "group",
+      "name": "development_mount_health",
+      "transform": { "x": -130, "y": 12, "z": 1, "anchor": "TOP_RIGHT" },
+      "children": [
+        {
+          "type": "text",
+          "text": "MOUNT",
+          "color": "#FFFFFFFF",
+          "shadow": true
+        },
+        {
+          "type": "progress_bar",
+          "transform": { "x": 0, "y": 13, "z": 1 },
+          "width": 120,
+          "height": 7,
+          "backgroundColor": "#FF351B28",
+          "foregroundColor": "#FFE05C91",
+          "valueSource": "MOUNT_HEALTH"
+        },
+        {
+          "type": "text",
+          "transform": { "x": 120, "y": 0, "z": 2 },
+          "valueSource": "MOUNT_HEALTH",
+          "color": "#FFFFFFFF",
+          "shadow": true,
+          "centered": true
+        }
+      ]
+    },
+    "JUMP_BAR": {
+      "type": "group",
+      "name": "development_jump_bar",
+      "transform": { "x": -91, "y": -36, "z": 1, "anchor": "BOTTOM_CENTER" },
+      "children": [
+        {
+          "type": "progress_bar",
+          "width": 182,
+          "height": 5,
+          "backgroundColor": "#FF293443",
+          "foregroundColor": "#FF55B8FF",
+          "valueSource": "JUMP_PROGRESS"
+        },
+        {
+          "type": "text",
+          "transform": { "x": 91, "y": -11, "z": 1 },
+          "text": "JUMP",
+          "color": "#FF8DD0FF",
+          "shadow": true,
+          "centered": true
+        }
+      ]
+    },
+    "EFFECTS": {
+      "type": "effect_list",
+      "name": "development_effects",
+      "transform": { "x": -210, "y": 46, "z": 3, "anchor": "TOP_RIGHT" },
+      "width": 200,
+      "effectRowHeight": 22,
+      "maxEffects": 8,
+      "backgroundColor": "#B0202630",
+      "foregroundColor": "#FFFFFFFF",
+      "beneficialColor": "#FF55DD77",
+      "harmfulColor": "#FFFF6666",
+      "showEffectDuration": true,
+      "showEffectIcons": true
+    },
     "CROSS_HAIR": {
       "type": "rectangle",
       "name": "development_crosshair",

@@ -346,11 +346,14 @@ For a progress bar, current-value sources normalize against their matching maxim
 
 `hotbar` compiles to `HotbarElement`. It draws all nine copied stacks, selected-slot framing, optional per-slot background, configurable slot size/spacing and item offsets, and optional decorations. Item models stay in Minecraft's renderer. `GuiGraphics.renderItemDecorations` supplies count text, durability bars, and the native item cooldown overlay.
 
+`effects`/`effect_list` compiles to `EffectListElement`. It consumes only effect snapshots and renders resource-pack-aware `textures/mob_effect/<id>.png` icons with localized names, amplifier level, remaining duration, theme-defined row/background/accent colors, and an entry limit. It does not retain `MobEffectInstance` objects or read the player from the renderer.
+
 ### Visibility policy
 
 | Part | Phase-four visibility |
 |---|---|
-| `HEALTH_BOX`, `FOOD`, `ARMOR` | Survival HUD permitted, not spectator, alive. |
+| `HEALTH_BOX`, `ARMOR` | Survival HUD permitted, not spectator, alive. |
+| `FOOD` | Same survival conditions and no current vehicle that exposes mount health, matching vanilla's food/mount-health substitution. |
 | `AIR` | Same survival conditions and underwater or air below maximum. |
 | `HOTBAR` | Not spectator and alive. Spectator hotbar remains vanilla. |
 | `EXPERIENCE` | Game mode exposes XP, alive, not spectator, and no active jump-capable mount. |
@@ -384,9 +387,13 @@ The actual Fabric Rendering API module resolved by `fabric-api 0.116.17+1.21.1` 
 
 ### Development theme and deferred work
 
-`mcui:development_test` now provides visibly distinct `HEALTH_BOX`, `FOOD`, `EXPERIENCE`, `AIR`, `HOTBAR`, and `CROSS_HAIR` parts. It includes health/food/XP/air progress bars, dynamic health and level text, and the native nine-slot hotbar. Its small `root` label intentionally exercises phase-three compatibility.
+`mcui:development_test` now provides visibly distinct `HEALTH_BOX`, `FOOD`, `EXPERIENCE`, `AIR`, `HOTBAR`, `CROSS_HAIR`, `MOUNT_HEALTH`, `JUMP_BAR`, and `EFFECTS` parts. It includes health/food/XP/air/mount/jump progress bars, dynamic health/mount-health/level text, the native nine-slot hotbar, and a snapshot-driven effect list. Its small `root` label intentionally exercises phase-three compatibility.
 
-Mount health data, jump data, part visibility, bindings, rendering entry, and vanilla gates are implemented; a dedicated mount-themed development layout is deferred. Effect snapshot and `EFFECTS` lifecycle/suppression are implemented; a native effect-list/icon element is deferred. `ENTITY_HEALTH_HUD` keeps its part type and coordinator entry, but target acquisition and entity snapshots are deferred to Phase 5+.
+Mount health data, jump data, part visibility, bindings, rendering entries, vanilla gates, and development layouts are implemented. Effect snapshots, lifecycle/suppression, and the initial icon/name/duration list element are implemented; richer SAO-specific effect styling remains deferred. `ENTITY_HEALTH_HUD` keeps its part type and coordinator entry, but target acquisition and entity snapshots are deferred to Phase 5+.
+
+### Manual validation follow-up
+
+The first user screenshots exposed two composition gaps rather than stale cached state: the development theme lacked `MOUNT_HEALTH`, `JUMP_BAR`, and `EFFECTS`, and custom food visibility did not mirror vanilla's mount-health substitution. The follow-up adds those three parts, treats only `LivingEntity.showVehicleHealth()` mounts as mount-health providers, switches FOOD/MOUNT and EXPERIENCE/JUMP every frame from the snapshot, and replaces the overlapping vanilla effect icons with the themed effect list. These corrections are implemented and await another manual user validation pass.
 
 No Lua, LuaJ, MiniScript, JEL, KSP, Koin, XML/xmlutil, CSS/ph-css, Forge/NeoForge, screen replacement, party implementation, or final SAO assets were added.
 
@@ -396,6 +403,7 @@ Verified on 2026-09-04 with the configured Java 21 toolchain:
 
 - `.\gradlew.bat compileKotlin compileClientKotlin --no-daemon --no-parallel`: successful after correcting one nullable registry-key conversion and one cross-source-set Kotlin smart cast.
 - `.\gradlew.bat compileClientJava --no-daemon --no-parallel`: successful; this additional source-set check covers the client-only Java Mixin that the preferred Kotlin task selection does not execute.
+- Manual-validation correction: the same Kotlin compile selection succeeded after fixing the effect-icon texture call's missing zero-origin UV arguments.
 - No tests, client launch, world entry, resource reload, screenshot, input simulation, temporary resource pack, or game-runtime validation was performed. Runtime behavior remains **awaiting manual user validation**.
 
 ## Phase-one verification record

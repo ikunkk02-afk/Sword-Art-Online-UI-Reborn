@@ -42,6 +42,7 @@ class HudDataProvider {
 
         val vehicle = player.vehicle
         val livingMount = vehicle as? LivingEntity
+        val showsMountHealth = livingMount?.showVehicleHealth() == true
         val jumpableMount = player.jumpableVehicle()
         val hitType = when {
             minecraft.crosshairPickEntity != null -> HudCrosshairTargetType.ENTITY
@@ -72,9 +73,9 @@ class HudDataProvider {
             offHandItem = player.offhandItem.copy(),
             activeEffects = activeEffects,
             riding = player.isPassenger,
-            hasLivingMount = livingMount != null,
-            mountHealth = livingMount?.health ?: 0f,
-            mountMaxHealth = livingMount?.maxHealth?.coerceAtLeast(1f) ?: 1f,
+            hasLivingMount = showsMountHealth,
+            mountHealth = if (showsMountHealth) livingMount?.health ?: 0f else 0f,
+            mountMaxHealth = if (showsMountHealth) livingMount?.maxHealth?.coerceAtLeast(1f) ?: 1f else 1f,
             hasJumpingMount = jumpableMount != null,
             jumpProgress = if (jumpableMount == null) 0f else player.jumpRidingScale.coerceIn(0f, 1f),
             jumpCooldown = jumpableMount?.jumpCooldown ?: 0,

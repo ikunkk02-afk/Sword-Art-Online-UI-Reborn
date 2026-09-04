@@ -36,6 +36,7 @@ interface ElementVisitor {
     fun visit(element: DynamicTextElement, context: RenderContext)
     fun visit(element: HudItemElement, context: RenderContext)
     fun visit(element: HotbarElement, context: RenderContext)
+    fun visit(element: EffectListElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -138,6 +139,22 @@ data class HotbarElement(
     val slotBackgroundColor: ArgbColor?,
     val selectedSlotColor: ArgbColor?,
     val decorations: Boolean,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class EffectListElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val width: Int,
+    val rowHeight: Int,
+    val maxEffects: Int,
+    val backgroundColor: ArgbColor?,
+    val textColor: ArgbColor,
+    val beneficialColor: ArgbColor,
+    val harmfulColor: ArgbColor,
+    val showDuration: Boolean,
+    val showIcons: Boolean,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
