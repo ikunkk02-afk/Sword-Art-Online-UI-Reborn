@@ -87,7 +87,7 @@ class RenderingElementVisitor(
     override fun visit(element: ProgressBarElement, context: RenderContext) = withElement(element, context) { animatedContext ->
         val data = hudData ?: return@withElement
         element.backgroundColor?.let { operations.fill(0, 0, element.width, element.height, renderColor(it, animatedContext)) }
-        val rawValue = HudBindingResolver.progress(element.valueSource, data)
+        val rawValue = HudBindingResolver.progress(element.valueSource, data, animations.mountSnapshot())
         val value = animations.progressValue(element.renderState.key, rawValue, element.renderState.animations)
         val foreground = renderColor(element.foregroundColor, animatedContext)
         when (element.direction) {
@@ -116,7 +116,7 @@ class RenderingElementVisitor(
     override fun visit(element: TexturedProgressBarElement, context: RenderContext) = withElement(element, context) { animatedContext ->
         val data = hudData ?: return@withElement
         element.background?.let { drawTextureRegion(it, 0, 0, element.width, element.height, animatedContext) }
-        val rawValue = HudBindingResolver.progress(element.valueSource, data)
+        val rawValue = HudBindingResolver.progress(element.valueSource, data, animations.mountSnapshot())
         val healthValue = element.healthAnimation?.let {
             animations.healthValue(element.renderState.key, rawValue, it)
         }
@@ -137,8 +137,8 @@ class RenderingElementVisitor(
     override fun visit(element: DynamicTextElement, context: RenderContext) = withElement(element, context) { animatedContext ->
         val data = hudData ?: return@withElement
         operations.text(
-            element.textSource?.let { HudBindingResolver.text(it, data) }
-                ?: element.valueSource?.let { HudBindingResolver.text(it, data) }
+            element.textSource?.let { HudBindingResolver.text(it, data, animations.mountSnapshot()) }
+                ?: element.valueSource?.let { HudBindingResolver.text(it, data, animations.mountSnapshot()) }
                 ?: return@withElement,
             0,
             0,

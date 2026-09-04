@@ -36,7 +36,15 @@ class HudRenderCoordinator {
         graphics: GuiGraphics,
         minecraft: Minecraft,
     ) {
-        animations.beginFrame(themeRevision, themeId, data.targetEntity, data.nearbyEntities)
+        animations.beginFrame(
+            revision = themeRevision,
+            themeId = themeId,
+            rawTarget = data.targetEntity,
+            nearbyEntities = data.nearbyEntities,
+            rawMount = data.mountSnapshot,
+            vehicleEntityId = data.vehicleEntityId,
+            rootVehicleEntityId = data.rootVehicleEntityId,
+        )
         if (cachedThemeRevision != themeRevision || cachedThemeId != themeId) {
             cachedThemeRevision = themeRevision
             cachedThemeId = themeId

@@ -51,6 +51,8 @@ enum class HudAnchor {
 enum class HudTextSource {
     PLAYER_NAME,
     HEALTH_SUMMARY,
+    MOUNT_NAME,
+    MOUNT_HEALTH_SUMMARY,
     TARGET_NAME,
     TARGET_HEALTH_SUMMARY,
 }

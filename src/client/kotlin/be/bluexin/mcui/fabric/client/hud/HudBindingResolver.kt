@@ -19,7 +19,11 @@ import kotlin.math.roundToInt
 
 /** Type-safe bindings used by dynamic HUD elements; no expression engine is involved. */
 object HudBindingResolver {
-    fun text(source: HudTextSource, data: HudDataSnapshot): String = when (source) {
+    fun text(
+        source: HudTextSource,
+        data: HudDataSnapshot,
+        retainedMount: MountHealthSnapshot? = data.mountSnapshot,
+    ): String = when (source) {
         HudTextSource.PLAYER_NAME -> data.playerName
         HudTextSource.HEALTH_SUMMARY -> buildString {
             append(format(data.playerHealth))
@@ -27,13 +31,21 @@ object HudBindingResolver {
             append(" / ")
             append(format(data.playerMaxHealth))
         }
+        HudTextSource.MOUNT_NAME -> retainedMount?.displayName.orEmpty()
+        HudTextSource.MOUNT_HEALTH_SUMMARY -> retainedMount?.let {
+            "${format(it.health)} / ${format(it.maxHealth)}"
+        }.orEmpty()
         HudTextSource.TARGET_NAME -> data.targetEntity?.displayName.orEmpty()
         HudTextSource.TARGET_HEALTH_SUMMARY -> data.targetEntity?.let {
             "${it.displayName} (${format(it.health)} / ${format(it.maxHealth)})"
         }.orEmpty()
     }
 
-    fun progress(source: HudValueSource, data: HudDataSnapshot): Float = when (source) {
+    fun progress(
+        source: HudValueSource,
+        data: HudDataSnapshot,
+        retainedMount: MountHealthSnapshot? = data.mountSnapshot,
+    ): Float = when (source) {
         HudValueSource.PLAYER_HEALTH -> ratio(data.playerHealth, data.playerMaxHealth)
         HudValueSource.PLAYER_MAX_HEALTH -> if (data.playerMaxHealth > 0f) 1f else 0f
         HudValueSource.PLAYER_ABSORPTION -> ratio(data.playerAbsorption, data.playerMaxHealth)
@@ -46,14 +58,21 @@ object HudBindingResolver {
         HudValueSource.ARMOR -> ratio(data.armor.toFloat(), MAX_ARMOR)
         HudValueSource.EXPERIENCE_PROGRESS -> data.experienceProgress.coerceIn(0f, 1f)
         HudValueSource.EXPERIENCE_LEVEL -> if (data.experienceLevel > 0) 1f else 0f
-        HudValueSource.MOUNT_HEALTH -> ratio(data.mountHealth, data.mountMaxHealth)
-        HudValueSource.MOUNT_MAX_HEALTH -> if (data.hasLivingMount) 1f else 0f
+        HudValueSource.MOUNT_HEALTH -> ratio(
+            retainedMount?.health ?: data.mountHealth,
+            retainedMount?.maxHealth ?: data.mountMaxHealth,
+        )
+        HudValueSource.MOUNT_MAX_HEALTH -> if (retainedMount != null || data.hasLivingMount) 1f else 0f
         HudValueSource.JUMP_PROGRESS -> data.jumpProgress.coerceIn(0f, 1f)
         HudValueSource.HOTBAR_SELECTED_SLOT -> data.selectedHotbarSlot / 8f
         HudValueSource.TARGET_HEALTH -> data.targetEntity?.let { ratio(it.health, it.maxHealth) } ?: 0f
     }
 
-    fun text(source: HudValueSource, data: HudDataSnapshot): String = when (source) {
+    fun text(
+        source: HudValueSource,
+        data: HudDataSnapshot,
+        retainedMount: MountHealthSnapshot? = data.mountSnapshot,
+    ): String = when (source) {
         HudValueSource.PLAYER_HEALTH -> format(data.playerHealth)
         HudValueSource.PLAYER_MAX_HEALTH -> format(data.playerMaxHealth)
         HudValueSource.PLAYER_ABSORPTION -> format(data.playerAbsorption)
@@ -66,8 +85,8 @@ object HudBindingResolver {
         HudValueSource.ARMOR -> data.armor.toString()
         HudValueSource.EXPERIENCE_PROGRESS -> format(data.experienceProgress)
         HudValueSource.EXPERIENCE_LEVEL -> data.experienceLevel.toString()
-        HudValueSource.MOUNT_HEALTH -> format(data.mountHealth)
-        HudValueSource.MOUNT_MAX_HEALTH -> format(data.mountMaxHealth)
+        HudValueSource.MOUNT_HEALTH -> format(retainedMount?.health ?: data.mountHealth)
+        HudValueSource.MOUNT_MAX_HEALTH -> format(retainedMount?.maxHealth ?: data.mountMaxHealth)
         HudValueSource.JUMP_PROGRESS -> format(data.jumpProgress)
         HudValueSource.HOTBAR_SELECTED_SLOT -> data.selectedHotbarSlot.toString()
         HudValueSource.TARGET_HEALTH -> data.targetEntity?.let { format(it.health) }.orEmpty()

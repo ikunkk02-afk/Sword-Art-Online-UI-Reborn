@@ -42,8 +42,17 @@ class HudDataProvider {
         }
 
         val vehicle = player.vehicle
-        val livingMount = vehicle as? LivingEntity
+        val rootVehicle = if (player.isPassenger) player.rootVehicle else null
+        val livingMount = (vehicle as? LivingEntity) ?: (rootVehicle as? LivingEntity)
         val showsMountHealth = livingMount?.showVehicleHealth() == true
+        val mountSnapshot = livingMount?.takeIf { showsMountHealth }?.let { mount ->
+            MountHealthSnapshot(
+                entityId = mount.id,
+                displayName = mount.displayName?.string ?: mount.name.string,
+                health = mount.health,
+                maxHealth = mount.maxHealth.coerceAtLeast(1f),
+            )
+        }
         val jumpableMount = player.jumpableVehicle()
         val hitType = when {
             minecraft.crosshairPickEntity != null -> HudCrosshairTargetType.ENTITY
@@ -56,7 +65,13 @@ class HudDataProvider {
         val nearbyEntities = minecraft.level!!.getEntitiesOfClass(
             LivingEntity::class.java,
             player.boundingBox.inflate(ENTITY_HUD_HORIZONTAL_RANGE, ENTITY_HUD_VERTICAL_RANGE, ENTITY_HUD_HORIZONTAL_RANGE),
-        ) { entity -> entity !== player && entity.isAlive && !entity.isInvisibleTo(player) }
+        ) { entity ->
+            entity !== player &&
+                entity !== vehicle &&
+                entity !== rootVehicle &&
+                entity.isAlive &&
+                !entity.isInvisibleTo(player)
+        }
             .asSequence()
             .sortedBy { entity -> player.distanceToSqr(entity) }
             .take(MAX_ENTITY_HUD_ENTRIES)
@@ -64,7 +79,7 @@ class HudDataProvider {
             .sortedBy { entity -> entity.health / entity.maxHealth }
             .toList()
         val targetEntity = (minecraft.crosshairPickEntity as? LivingEntity)
-            ?.takeIf { it !== player && !it.isInvisibleTo(player) }
+            ?.takeIf { it !== player && it !== vehicle && it !== rootVehicle && !it.isInvisibleTo(player) }
             ?.let { entitySnapshot(it, player) }
 
         return HudDataSnapshot(
@@ -91,8 +106,11 @@ class HudDataProvider {
             activeEffects = activeEffects,
             riding = player.isPassenger,
             hasLivingMount = showsMountHealth,
-            mountHealth = if (showsMountHealth) livingMount?.health ?: 0f else 0f,
-            mountMaxHealth = if (showsMountHealth) livingMount?.maxHealth?.coerceAtLeast(1f) ?: 1f else 1f,
+            mountHealth = mountSnapshot?.health ?: 0f,
+            mountMaxHealth = mountSnapshot?.maxHealth ?: 1f,
+            mountSnapshot = mountSnapshot,
+            vehicleEntityId = vehicle?.id,
+            rootVehicleEntityId = rootVehicle?.id,
             hasJumpingMount = jumpableMount != null,
             jumpProgress = if (jumpableMount == null) 0f else player.jumpRidingScale.coerceIn(0f, 1f),
             jumpCooldown = jumpableMount?.jumpCooldown ?: 0,

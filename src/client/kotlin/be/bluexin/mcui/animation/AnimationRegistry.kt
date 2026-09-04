@@ -11,6 +11,7 @@ package be.bluexin.mcui.animation
 
 import be.bluexin.mcui.Constants
 import be.bluexin.mcui.fabric.client.hud.HudEffectSnapshot
+import be.bluexin.mcui.fabric.client.hud.MountHealthSnapshot
 import be.bluexin.mcui.fabric.client.hud.TargetEntitySnapshot
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.themes.AnimationProperty
@@ -46,6 +47,7 @@ class AnimationRegistry(
     private var themeId = "unknown"
     private var currentTarget: TargetEntitySnapshot? = null
     private var targetLastSeenAt = 0L
+    private var currentMount: MountHealthSnapshot? = null
 
     var nowNanos: Long = 0L
         private set
@@ -55,12 +57,16 @@ class AnimationRegistry(
         themeId: String,
         rawTarget: TargetEntitySnapshot?,
         nearbyEntities: List<TargetEntitySnapshot> = emptyList(),
+        rawMount: MountHealthSnapshot? = null,
+        vehicleEntityId: Int? = null,
+        rootVehicleEntityId: Int? = null,
     ) {
         if (revision != themeRevision || themeId != this.themeId) reset(revision)
         this.themeId = themeId
         nowNanos = clock.advance()
         updateActiveElements()
-        updateTarget(rawTarget, nearbyEntities)
+        updateMount(rawMount)
+        updateTarget(rawTarget, nearbyEntities, vehicleEntityId, rootVehicleEntityId)
     }
 
     fun shouldRenderPart(part: HudPartType, root: Element, visibilityTarget: Boolean): Boolean = guarded(
@@ -72,7 +78,9 @@ class AnimationRegistry(
         state.update(nowNanos)
         state.setTarget(visibilityTarget, root.renderState.animations, nowNanos)
         elementRuntime(root.renderState.key, root.renderState.animations, visibilityTarget)
-        state.shouldRender
+        val shouldRender = state.shouldRender
+        if (part == HudPartType.MOUNT_HEALTH && !visibilityTarget && !shouldRender) currentMount = null
+        shouldRender
     }
 
     fun elementRuntime(key: String, specs: List<ResolvedAnimationSpec>, visible: Boolean): AnimatedRenderState = guarded(
@@ -147,6 +155,9 @@ class AnimationRegistry(
         return currentTarget
     }
 
+    /** Last immutable riding values remain available only until the mount part finishes exiting. */
+    fun mountSnapshot(): MountHealthSnapshot? = currentMount
+
     private fun reset(revision: Long) {
         themeRevision = revision
         elementStates.clear()
@@ -159,6 +170,7 @@ class AnimationRegistry(
         loggedFailures.clear()
         currentTarget = null
         targetLastSeenAt = 0L
+        currentMount = null
         clock.reset()
     }
 
@@ -171,15 +183,35 @@ class AnimationRegistry(
         }
     }
 
-    private fun updateTarget(rawTarget: TargetEntitySnapshot?, nearbyEntities: List<TargetEntitySnapshot>) {
-        if (rawTarget != null && rawTarget.alive) {
+    private fun updateMount(rawMount: MountHealthSnapshot?) {
+        if (rawMount != null) currentMount = rawMount
+    }
+
+    private fun updateTarget(
+        rawTarget: TargetEntitySnapshot?,
+        nearbyEntities: List<TargetEntitySnapshot>,
+        vehicleEntityId: Int?,
+        rootVehicleEntityId: Int?,
+    ) {
+        if (currentTarget?.let { isCurrentMount(it.entityId, vehicleEntityId, rootVehicleEntityId) } == true) {
+            currentTarget = null
+            targetLastSeenAt = 0L
+        }
+        if (rawTarget != null && rawTarget.alive &&
+            !isCurrentMount(rawTarget.entityId, vehicleEntityId, rootVehicleEntityId)
+        ) {
             currentTarget = rawTarget
             targetLastSeenAt = nowNanos
         } else {
             val targetId = currentTarget?.entityId ?: return
-            nearbyEntities.firstOrNull { it.entityId == targetId }?.let { currentTarget = it }
+            nearbyEntities.firstOrNull {
+                it.entityId == targetId && !isCurrentMount(it.entityId, vehicleEntityId, rootVehicleEntityId)
+            }?.let { currentTarget = it }
         }
     }
+
+    private fun isCurrentMount(entityId: Int, vehicleEntityId: Int?, rootVehicleEntityId: Int?): Boolean =
+        entityId == vehicleEntityId || entityId == rootVehicleEntityId
 
     private inline fun <T> guarded(key: String, property: String, fallback: () -> T, block: () -> T): T = try {
         block()

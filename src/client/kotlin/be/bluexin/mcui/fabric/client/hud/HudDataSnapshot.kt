@@ -39,6 +39,9 @@ data class HudDataSnapshot(
     val hasLivingMount: Boolean,
     val mountHealth: Float,
     val mountMaxHealth: Float,
+    val mountSnapshot: MountHealthSnapshot?,
+    val vehicleEntityId: Int?,
+    val rootVehicleEntityId: Int?,
     val hasJumpingMount: Boolean,
     val jumpProgress: Float,
     val jumpCooldown: Int,
@@ -56,6 +59,14 @@ data class HudDataSnapshot(
     val guiScale: Double,
     val partialTick: Float,
     val onFire: Boolean = false,
+)
+
+/** Safe riding data retained by the animation runtime while the mount HUD exits. */
+data class MountHealthSnapshot(
+    val entityId: Int,
+    val displayName: String,
+    val health: Float,
+    val maxHealth: Float,
 )
 
 data class TargetEntitySnapshot(

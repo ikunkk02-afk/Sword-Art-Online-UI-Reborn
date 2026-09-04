@@ -320,8 +320,83 @@
     },
     "MOUNT_HEALTH": {
       "type": "group",
-      "name": "sao_hidden_vanilla_mount_health",
-      "children": [],
+      "name": "sao_mount_health",
+      "transform": { "x": 8, "y": 38, "z": 1, "anchor": "TOP_LEFT" },
+      "children": [
+        {
+          "type": "fragment_reference",
+          "fragment": "health_frame"
+        },
+        {
+          "type": "text",
+          "name": "mount_name",
+          "transform": { "x": 14, "y": 3, "z": 2 },
+          "textSource": "MOUNT_NAME",
+          "color": "#FFFFFFFF",
+          "shadow": true
+        },
+        {
+          "type": "textured_progress_bar",
+          "name": "mount_health_bar",
+          "transform": { "x": 70, "y": 3, "z": 2 },
+          "width": 215,
+          "height": 9,
+          "valueSource": "MOUNT_HEALTH",
+          "direction": "LEFT_TO_RIGHT",
+          "clip": true,
+          "foregroundTexture": {
+            "texture": "saoui:textures/sao/gui.png",
+            "u": 0,
+            "v": 188,
+            "sourceWidth": 215,
+            "sourceHeight": 9,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "tint": "#FF93F43E"
+          },
+          "valueTints": [
+            { "maximum": 0.1, "tint": "#FFBD0000" },
+            { "maximum": 0.2, "tint": "#FFF40000" },
+            { "maximum": 0.3, "tint": "#FFF47800" },
+            { "maximum": 0.4, "tint": "#FFF4BD00" },
+            { "maximum": 0.5, "tint": "#FFEDEB38" }
+          ]
+        },
+        {
+          "type": "group",
+          "name": "mount_health_value_panel",
+          "transform": { "x": 184, "y": 12, "z": 3 },
+          "children": [
+            { "type": "fragment_reference", "fragment": "panel_left_cap" },
+            {
+              "type": "texture",
+              "transform": { "x": 5 },
+              "width": 64,
+              "height": 13,
+              "texture": "saoui:textures/sao/gui.png",
+              "u": 66,
+              "v": 15,
+              "sourceWidth": 5,
+              "sourceHeight": 13,
+              "textureWidth": 256,
+              "textureHeight": 256
+            },
+            {
+              "type": "fragment_reference",
+              "transform": { "x": 69 },
+              "fragment": "panel_right_cap"
+            },
+            {
+              "type": "text",
+              "transform": { "x": 37, "y": 2, "z": 2 },
+              "textSource": "MOUNT_HEALTH_SUMMARY",
+              "color": "#FFFFFFFF",
+              "shadow": true,
+              "centered": true
+            }
+          ]
+        }
+      ],
       "animations": [
         { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
         { "property": "TRANSLATION_Y", "duration": 160, "easing": "EASE_OUT", "from": 5.0, "to": 0.0, "trigger": "ON_SHOW" },
