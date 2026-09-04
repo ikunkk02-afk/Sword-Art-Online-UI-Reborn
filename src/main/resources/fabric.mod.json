@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "mcui",
+	"version": "${version}",
+	"name": "Sword Art Online UI: Reborn",
+	"description": "An unofficial modern Fabric port and continuation of MCUI / Sword Art Online UI.",
+	"authors": [
+		"Bluexin",
+		"Tencao"
+	],
+	"contributors": [
+		"ikunkk02-afk"
+	],
+	"contact": {
+		"homepage": "https://github.com/ikunkk02-afk/Sword-Art-Online-UI-Reborn",
+		"sources": "https://github.com/ikunkk02-afk/Sword-Art-Online-UI-Reborn",
+		"issues": "https://github.com/ikunkk02-afk/Sword-Art-Online-UI-Reborn/issues"
+	},
+	"license": "GPL-3.0-or-later",
+	"icon": "assets/mcui/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "be.bluexin.mcui.fabric.MCUIFabric",
+				"adapter": "kotlin"
+			}
+		],
+		"client": [
+			{
+				"value": "be.bluexin.mcui.fabric.client.MCUIFabricClient",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	}
+}
