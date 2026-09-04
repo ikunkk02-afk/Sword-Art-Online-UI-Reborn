@@ -29,6 +29,14 @@ object MCUIHudRenderer {
     private fun renderHud(graphics: net.minecraft.client.gui.GuiGraphics, ticks: net.minecraft.client.DeltaTracker) {
         val minecraft = Minecraft.getInstance()
         val data = dataProvider.capture(minecraft, graphics, ticks) ?: return
-        coordinator.render(MCUIThemes.manager.activeTheme.hud, data, graphics, minecraft)
+        val snapshot = MCUIThemes.manager.snapshot
+        coordinator.render(
+            snapshot.revision,
+            snapshot.activeTheme.id.toString(),
+            snapshot.activeTheme.hud,
+            data,
+            graphics,
+            minecraft,
+        )
     }
 }

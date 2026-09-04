@@ -28,7 +28,8 @@ object HudPartVisibility {
         HudPartType.MOUNT_HEALTH -> data.hasLivingMount && !data.spectator && !data.dead
         HudPartType.JUMP_BAR -> data.hasJumpingMount && !data.spectator && !data.dead
 
-        HudPartType.ENTITY_HEALTH_HUD -> data.firstPerson && !data.dead && data.nearbyEntities.isNotEmpty()
+        HudPartType.ENTITY_HEALTH_HUD -> data.firstPerson && !data.dead &&
+            (data.targetEntity != null || data.nearbyEntities.isNotEmpty())
 
         HudPartType.AM2BARS,
         HudPartType.PARTY -> false

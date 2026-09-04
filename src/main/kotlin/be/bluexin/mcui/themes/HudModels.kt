@@ -51,6 +51,8 @@ enum class HudAnchor {
 enum class HudTextSource {
     PLAYER_NAME,
     HEALTH_SUMMARY,
+    TARGET_NAME,
+    TARGET_HEALTH_SUMMARY,
 }
 
 /** Texture selection used by the resolved effect list; legacy themes never execute old draw code. */
@@ -79,6 +81,7 @@ enum class HudValueSource {
     MOUNT_MAX_HEALTH,
     JUMP_PROGRESS,
     HOTBAR_SELECTED_SLOT,
+    TARGET_HEALTH,
 }
 
 @Serializable

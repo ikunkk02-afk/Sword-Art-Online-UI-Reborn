@@ -30,8 +30,10 @@ data class HudDataSnapshot(
     val experienceVisible: Boolean,
     val selectedHotbarSlot: Int,
     val hotbarItems: List<ItemStack>,
+    val hotbarItemPopTimes: List<Int>,
     val mainHandItem: ItemStack,
     val offHandItem: ItemStack,
+    val offHandItemPopTime: Int,
     val activeEffects: List<HudEffectSnapshot>,
     val riding: Boolean,
     val hasLivingMount: Boolean,
@@ -41,7 +43,8 @@ data class HudDataSnapshot(
     val jumpProgress: Float,
     val jumpCooldown: Int,
     val crosshair: HudCrosshairSnapshot,
-    val nearbyEntities: List<HudEntitySnapshot> = emptyList(),
+    val targetEntity: TargetEntitySnapshot? = null,
+    val nearbyEntities: List<TargetEntitySnapshot> = emptyList(),
     val creative: Boolean,
     val spectator: Boolean,
     val survivalHud: Boolean,
@@ -55,11 +58,18 @@ data class HudDataSnapshot(
     val onFire: Boolean = false,
 )
 
-data class HudEntitySnapshot(
-    val name: String,
+data class TargetEntitySnapshot(
+    val entityId: Int,
+    val displayName: String,
     val health: Float,
     val maxHealth: Float,
+    val entityType: ResourceLocation,
+    val distance: Float,
+    val alive: Boolean,
+    val armor: Int? = null,
 )
+
+typealias HudEntitySnapshot = TargetEntitySnapshot
 
 data class HudEffectSnapshot(
     val id: ResourceLocation,

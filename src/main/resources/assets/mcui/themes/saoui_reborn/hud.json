@@ -107,6 +107,23 @@
             "textureHeight": 256,
             "tint": "#FF93F43E"
           },
+          "delayedForegroundTexture": {
+            "texture": "saoui:textures/sao/gui.png",
+            "u": 0,
+            "v": 188,
+            "sourceWidth": 215,
+            "sourceHeight": 9,
+            "textureWidth": 256,
+            "textureHeight": 256,
+            "tint": "#FFFFBA66"
+          },
+          "healthAnimation": {
+            "mainDuration": 150,
+            "damageDelay": 240,
+            "damageDuration": 420,
+            "healDuration": 180,
+            "easing": "EASE_OUT"
+          },
           "valueTints": [
             { "maximum": 0.1, "tint": "#FFBD0000" },
             { "maximum": 0.2, "tint": "#FFF40000" },
@@ -169,7 +186,10 @@
         "textureWidth": 256,
         "textureHeight": 256,
         "tint": "#FFF5AB2A"
-      }
+      },
+      "animations": [
+        { "property": "PROGRESS", "duration": 160, "easing": "EASE_OUT", "trigger": "ON_VALUE_CHANGE" }
+      ]
     },
     "AIR": {
       "type": "textured_progress_bar",
@@ -188,7 +208,13 @@
         "textureWidth": 256,
         "textureHeight": 256,
         "tint": "#802ADDF5"
-      }
+      },
+      "animations": [
+        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": -6.0, "to": 0.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" },
+        { "property": "TRANSLATION_X", "duration": 140, "easing": "EASE_IN", "from": 0.0, "to": -6.0, "trigger": "ON_HIDE" }
+      ]
     },
     "EXPERIENCE": {
       "type": "group",
@@ -268,7 +294,10 @@
         "textureWidth": 256,
         "textureHeight": 256,
         "tint": "#FFFFBA66"
-      }
+      },
+      "animations": [
+        { "property": "TRANSLATION_Y", "duration": 180, "easing": "EASE_OUT", "trigger": "ON_VALUE_CHANGE" }
+      ]
     },
     "CROSS_HAIR": {
       "type": "texture",
@@ -292,7 +321,12 @@
     "MOUNT_HEALTH": {
       "type": "group",
       "name": "sao_hidden_vanilla_mount_health",
-      "children": []
+      "children": [],
+      "animations": [
+        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "TRANSLATION_Y", "duration": 160, "easing": "EASE_OUT", "from": 5.0, "to": 0.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
+      ]
     },
     "JUMP_BAR": {
       "type": "textured_progress_bar",
@@ -315,7 +349,12 @@
         "sourceHeight": 5,
         "textureWidth": 182,
         "textureHeight": 5
-      }
+      },
+      "animations": [
+        { "property": "ALPHA", "duration": 140, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "TRANSLATION_Y", "duration": 140, "easing": "EASE_OUT", "from": 5.0, "to": 0.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
+      ]
     },
     "EFFECTS": {
       "type": "effect_list",
@@ -331,7 +370,17 @@
       "showEffectDuration": false,
       "showEffectIcons": true,
       "showEffectLabels": false,
-      "includePlayerStates": true
+      "includePlayerStates": true,
+      "animations": [
+        { "property": "ALPHA", "duration": 140, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
+      ],
+      "entryAnimations": [
+        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": -5.0, "to": 0.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 120, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" },
+        { "property": "TRANSLATION_X", "duration": 120, "easing": "EASE_IN", "from": 0.0, "to": -5.0, "trigger": "ON_HIDE" }
+      ]
     },
     "PARTY": {
       "type": "group",
@@ -344,7 +393,12 @@
       "transform": { "x": -100, "y": 35, "z": 5, "anchor": "TOP_RIGHT" },
       "width": 80,
       "entityRowHeight": 15,
-      "maxEntities": 8,
+      "maxEntities": 5,
+      "animations": [
+        { "property": "ALPHA", "duration": 160, "easing": "EASE_OUT", "from": 0.0, "to": 1.0, "trigger": "ON_SHOW" },
+        { "property": "TRANSLATION_X", "duration": 160, "easing": "EASE_OUT", "from": 8.0, "to": 0.0, "trigger": "ON_SHOW" },
+        { "property": "ALPHA", "duration": 140, "easing": "EASE_IN", "from": 1.0, "to": 0.0, "trigger": "ON_HIDE" }
+      ],
       "foregroundColor": "#FFFFFFFF",
       "backgroundTexture": {
         "texture": "saoui:textures/sao/entities.png",

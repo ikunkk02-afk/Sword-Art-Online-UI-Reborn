@@ -9,6 +9,9 @@
 
 package be.bluexin.mcui.themes
 
+import be.bluexin.mcui.animation.Easing
+import be.bluexin.mcui.animation.ResolvedAnimationSpec
+import be.bluexin.mcui.animation.ResolvedHealthAnimationSpec
 import be.bluexin.mcui.render.ArgbColor
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
@@ -24,6 +27,7 @@ import be.bluexin.mcui.render.element.ProgressTint
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
 import be.bluexin.mcui.render.element.TexturedProgressBarElement
+import be.bluexin.mcui.render.element.TargetEntityHealthElement
 import be.bluexin.mcui.render.element.TextureElement
 import be.bluexin.mcui.render.element.TextureRegion
 import net.minecraft.network.chat.Component
@@ -146,7 +150,12 @@ class ThemeCompiler(
         fragmentStack: List<String>,
     ): Element? {
         val transform = compileTransform(definition, element.transform, "$path.transform", issues) ?: return null
-        val state = ResolvedRenderState(enabled = element.enabled, name = element.name ?: path)
+        val state = ResolvedRenderState(
+            enabled = element.enabled,
+            name = element.name ?: path,
+            key = path,
+            animations = compileAnimations(definition, element.animations, "$path.animations", issues),
+        )
         return when (element.type.lowercase()) {
             "group" -> {
                 val children = element.children.mapIndexedNotNull { index, child ->
@@ -264,6 +273,14 @@ class ThemeCompiler(
                 transform,
                 issues,
             )
+            "target_entity_health", "target_health" -> compileTargetEntityHealth(
+                definition,
+                element,
+                path,
+                state,
+                transform,
+                issues,
+            )
             else -> {
                 issues.error(definition, "$path.type", "Unknown element type '${element.type}'")
                 null
@@ -340,6 +357,32 @@ class ThemeCompiler(
                 ProgressTint(step.maximum.toFloat(), ArgbColor(step.tint.value))
             }
         }.sortedBy(ProgressTint::maximum)
+        val delayedForeground = element.delayedForegroundTexture?.let {
+            compileTextureRegion(definition, it, "$path.delayedForegroundTexture", width, height, issues)
+        }
+        val healthAnimation = element.healthAnimation?.let { animation ->
+            if (source != HudValueSource.PLAYER_HEALTH) {
+                issues.warning(definition, "$path.healthAnimation", "Health animation is only supported for PLAYER_HEALTH")
+                null
+            } else if (animation.easing == AnimationEasing.UNSUPPORTED) {
+                issues.warning(definition, "$path.healthAnimation.easing", "Unsupported health easing; animation deferred")
+                null
+            } else if (
+                animation.mainDuration < 0 || animation.damageDelay < 0 || animation.damageDuration < 0 ||
+                animation.healDuration < 0
+            ) {
+                issues.warning(definition, "$path.healthAnimation", "Negative health animation timing is unsupported; animation deferred")
+                null
+            } else {
+                ResolvedHealthAnimationSpec(
+                    mainDurationMillis = animation.mainDuration,
+                    damageDelayMillis = animation.damageDelay,
+                    damageDurationMillis = animation.damageDuration,
+                    healDurationMillis = animation.healDuration,
+                    easing = Easing.resolve(animation.easing),
+                )
+            }
+        }
         return TexturedProgressBarElement(
             renderState = state,
             transform = transform,
@@ -352,6 +395,8 @@ class ThemeCompiler(
             clip = element.clip,
             valueTints = valueTints,
             creativeTint = element.creativeTint?.let { ArgbColor(it.value) },
+            delayedForeground = delayedForeground,
+            healthAnimation = healthAnimation,
         )
     }
 
@@ -384,14 +429,35 @@ class ThemeCompiler(
             issues.error(definition, "$path.fragment", "Circular fragment reference: $cycle")
             return null
         }
+        val instantiated = applyFragmentArguments(fragment, element.fragmentArguments)
         val resolved = compileElement(
             definition,
-            fragment,
-            "fragments.$key",
+            instantiated,
+            "$path.fragment[$key]",
             issues,
             fragmentStack + key,
         ) ?: return null
         return GroupElement(state, transform, listOf(resolved))
+    }
+
+    private fun applyFragmentArguments(
+        fragment: ElementDefinition,
+        arguments: FragmentArguments,
+    ): ElementDefinition {
+        val transform = fragment.transform.copy(
+            x = arguments.x ?: fragment.transform.x,
+            y = arguments.y ?: fragment.transform.y,
+            z = arguments.z ?: fragment.transform.z,
+            scale = arguments.scale ?: fragment.transform.scale,
+        )
+        return fragment.copy(
+            enabled = arguments.enabled ?: fragment.enabled,
+            transform = transform,
+            color = arguments.color ?: fragment.color,
+            text = arguments.text ?: fragment.text,
+            texture = arguments.texture ?: fragment.texture,
+            tint = arguments.tint ?: fragment.tint,
+        )
     }
 
     private fun compileHotbar(
@@ -494,6 +560,48 @@ class ThemeCompiler(
             iconSize = element.effectIconSize,
             iconSet = element.effectIconSet,
             includePlayerStates = element.includePlayerStates,
+            entryAnimations = compileAnimations(
+                definition,
+                element.entryAnimations,
+                "$path.entryAnimations",
+                issues,
+            ),
+        )
+    }
+
+    private fun compileTargetEntityHealth(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        val width = positiveDimension(definition, element.width, "$path.width", issues) ?: return null
+        val height = positiveDimension(definition, element.height ?: element.entityRowHeight, "$path.height", issues)
+            ?: return null
+        val backgroundDefinition = element.backgroundTexture ?: run {
+            issues.error(definition, "$path.backgroundTexture", "Target health background texture is required")
+            return null
+        }
+        val foregroundDefinition = element.foregroundTexture ?: run {
+            issues.error(definition, "$path.foregroundTexture", "Target health foreground texture is required")
+            return null
+        }
+        if (element.targetLinger < 0) {
+            issues.warning(definition, "$path.targetLinger", "Negative target linger is unsupported; using 3000ms")
+        }
+        return TargetEntityHealthElement(
+            renderState = state,
+            transform = transform,
+            width = width,
+            height = height,
+            background = compileTextureRegion(definition, backgroundDefinition, "$path.backgroundTexture", width, height, issues)
+                ?: return null,
+            foreground = compileTextureRegion(definition, foregroundDefinition, "$path.foregroundTexture", width, height, issues)
+                ?: return null,
+            textColor = ArgbColor((element.foregroundColor ?: ArgbColorDefinition.WHITE).value),
+            lingerMillis = if (element.targetLinger < 0) 3000 else element.targetLinger,
         )
     }
 
@@ -686,6 +794,50 @@ class ThemeCompiler(
             scaleY = value.scale.toFloat(),
             anchor = value.anchor,
         )
+    }
+
+    private fun compileAnimations(
+        definition: ThemeDefinition,
+        animations: List<AnimationDefinition>,
+        path: String,
+        issues: MutableList<ThemeIssue>,
+    ): List<ResolvedAnimationSpec> = animations.mapIndexedNotNull { index, animation ->
+        val field = "$path[$index]"
+        when {
+            animation.property == AnimationProperty.UNSUPPORTED ||
+                animation.trigger == AnimationTrigger.UNSUPPORTED ||
+                animation.easing == AnimationEasing.UNSUPPORTED -> {
+                issues.warning(definition, field, "Unsupported animation property, trigger, or easing; animator deferred")
+                null
+            }
+            animation.duration < 0 || animation.delay < 0 -> {
+                issues.warning(definition, field, "Negative duration/delay is unsupported; animator deferred")
+                null
+            }
+            animation.from?.isFinite() == false || animation.to?.isFinite() == false -> {
+                issues.warning(definition, field, "Animation endpoints must be finite literal values; animator deferred")
+                null
+            }
+            animation.property == AnimationProperty.COLOR && (animation.from == null || animation.to == null) -> {
+                issues.warning(definition, field, "COLOR animation requires literal packed-ARGB from and to values")
+                null
+            }
+            animation.property != AnimationProperty.PROGRESS &&
+                animation.trigger == AnimationTrigger.ON_VALUE_CHANGE &&
+                animation.property !in setOf(AnimationProperty.TRANSLATION_X, AnimationProperty.TRANSLATION_Y) -> {
+                issues.warning(definition, field, "Unsupported ON_VALUE_CHANGE property '${animation.property}'; animator deferred")
+                null
+            }
+            else -> ResolvedAnimationSpec(
+                property = animation.property,
+                durationMillis = animation.duration,
+                delayMillis = animation.delay,
+                easing = Easing.resolve(animation.easing),
+                from = animation.from,
+                to = animation.to,
+                trigger = animation.trigger,
+            )
+        }
     }
 
     private fun positiveDimension(

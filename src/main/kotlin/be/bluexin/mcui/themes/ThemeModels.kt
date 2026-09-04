@@ -117,6 +117,10 @@ data class ElementDefinition(
     val transform: TransformDefinition = TransformDefinition(),
     val children: List<ElementDefinition> = emptyList(),
     val fragment: String? = null,
+    val fragmentArguments: FragmentArguments = FragmentArguments(),
+    val animations: List<AnimationDefinition> = emptyList(),
+    /** Per-entry animation for list-like elements such as status effects. */
+    val entryAnimations: List<AnimationDefinition> = emptyList(),
     val width: Int? = null,
     val height: Int? = null,
     val color: ArgbColorDefinition? = null,
@@ -137,6 +141,8 @@ data class ElementDefinition(
     val direction: ProgressDirection = ProgressDirection.LEFT_TO_RIGHT,
     val backgroundTexture: TextureRegionDefinition? = null,
     val foregroundTexture: TextureRegionDefinition? = null,
+    val delayedForegroundTexture: TextureRegionDefinition? = null,
+    val healthAnimation: HealthAnimationDefinition? = null,
     val valueTints: List<ProgressTintDefinition> = emptyList(),
     val creativeTint: ArgbColorDefinition? = null,
     val clip: Boolean = true,
@@ -168,6 +174,7 @@ data class ElementDefinition(
     val includePlayerStates: Boolean = false,
     val entityRowHeight: Int = 15,
     val maxEntities: Int = 8,
+    val targetLinger: Int = 3000,
 )
 
 data class ThemeDefinition(

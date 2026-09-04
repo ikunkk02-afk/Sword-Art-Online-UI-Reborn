@@ -26,6 +26,7 @@ class HudDataProvider {
 
         val inventory = player.inventory
         val hotbarItems = List(HOTBAR_SIZE) { inventory.items[it].copy() }
+        val hotbarItemPopTimes = List(HOTBAR_SIZE) { inventory.items[it].popTime }
         val activeEffects = player.activeEffects.mapNotNull { instance ->
             val effect = instance.effect.value()
             val effectId = BuiltInRegistries.MOB_EFFECT.getKey(effect) ?: return@mapNotNull null
@@ -54,19 +55,17 @@ class HudDataProvider {
         val maxAir = player.maxAirSupply.coerceAtLeast(1)
         val nearbyEntities = minecraft.level!!.getEntitiesOfClass(
             LivingEntity::class.java,
-            player.boundingBox.inflate(ENTITY_HUD_RANGE),
+            player.boundingBox.inflate(ENTITY_HUD_HORIZONTAL_RANGE, ENTITY_HUD_VERTICAL_RANGE, ENTITY_HUD_HORIZONTAL_RANGE),
         ) { entity -> entity !== player && entity.isAlive && !entity.isInvisibleTo(player) }
             .asSequence()
             .sortedBy { entity -> player.distanceToSqr(entity) }
             .take(MAX_ENTITY_HUD_ENTRIES)
-            .map { entity ->
-                HudEntitySnapshot(
-                    name = entity.displayName?.string ?: entity.name.string,
-                    health = entity.health,
-                    maxHealth = entity.maxHealth.coerceAtLeast(1f),
-                )
-            }
+            .map { entity -> entitySnapshot(entity, player) }
+            .sortedBy { entity -> entity.health / entity.maxHealth }
             .toList()
+        val targetEntity = (minecraft.crosshairPickEntity as? LivingEntity)
+            ?.takeIf { it !== player && !it.isInvisibleTo(player) }
+            ?.let { entitySnapshot(it, player) }
 
         return HudDataSnapshot(
             playerName = player.displayName?.string ?: player.name.string,
@@ -85,8 +84,10 @@ class HudDataProvider {
             experienceVisible = gameMode.hasExperience(),
             selectedHotbarSlot = inventory.selected.coerceIn(0, HOTBAR_SIZE - 1),
             hotbarItems = hotbarItems,
+            hotbarItemPopTimes = hotbarItemPopTimes,
             mainHandItem = player.mainHandItem.copy(),
             offHandItem = player.offhandItem.copy(),
+            offHandItemPopTime = player.offhandItem.popTime,
             activeEffects = activeEffects,
             riding = player.isPassenger,
             hasLivingMount = showsMountHealth,
@@ -100,6 +101,7 @@ class HudDataProvider {
                 attackStrength = attackStrength,
                 attackReady = attackStrength >= 1f,
             ),
+            targetEntity = targetEntity,
             nearbyEntities = nearbyEntities,
             creative = player.isCreative,
             spectator = player.isSpectator,
@@ -115,11 +117,23 @@ class HudDataProvider {
         )
     }
 
+    private fun entitySnapshot(entity: LivingEntity, player: LivingEntity): TargetEntitySnapshot = TargetEntitySnapshot(
+        entityId = entity.id,
+        displayName = entity.displayName?.string ?: entity.name.string,
+        health = entity.health,
+        maxHealth = entity.maxHealth.coerceAtLeast(1f),
+        entityType = BuiltInRegistries.ENTITY_TYPE.getKey(entity.type),
+        distance = player.distanceTo(entity),
+        alive = entity.isAlive,
+        armor = entity.armorValue,
+    )
+
     private companion object {
         const val HOTBAR_SIZE = 9
         const val DEFAULT_MAX_FOOD = 20
         const val DEFAULT_MAX_SATURATION = 20f
-        const val ENTITY_HUD_RANGE = 32.0
-        const val MAX_ENTITY_HUD_ENTRIES = 8
+        const val ENTITY_HUD_HORIZONTAL_RANGE = 10.0
+        const val ENTITY_HUD_VERTICAL_RANGE = 5.0
+        const val MAX_ENTITY_HUD_ENTRIES = 5
     }
 }

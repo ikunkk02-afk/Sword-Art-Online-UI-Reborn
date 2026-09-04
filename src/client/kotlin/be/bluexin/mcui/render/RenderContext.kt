@@ -16,6 +16,9 @@ data class RenderContext(
     val partialTick: Float,
     val guiWidth: Int,
     val guiHeight: Int,
+    val alphaMultiplier: Float = 1f,
+    val colorOverride: ArgbColor? = null,
+    val visibilityTarget: Boolean = true,
 )
 
 /** A transform after future theme expressions have been evaluated. */
@@ -49,5 +52,7 @@ data class ClipRect(
 data class ResolvedRenderState(
     val enabled: Boolean = true,
     val name: String = "",
+    val key: String = name,
     val clip: ClipRect? = null,
+    val animations: List<be.bluexin.mcui.animation.ResolvedAnimationSpec> = emptyList(),
 )

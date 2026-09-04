@@ -10,7 +10,12 @@
 package be.bluexin.mcui.themes.legacy
 
 import be.bluexin.mcui.themes.ArgbColorDefinition
+import be.bluexin.mcui.themes.AnimationDefinition
+import be.bluexin.mcui.themes.AnimationEasing
+import be.bluexin.mcui.themes.AnimationProperty
+import be.bluexin.mcui.themes.AnimationTrigger
 import be.bluexin.mcui.themes.ElementDefinition
+import be.bluexin.mcui.themes.FragmentArguments
 import be.bluexin.mcui.themes.HotbarOrientation
 import be.bluexin.mcui.themes.HudAnchor
 import be.bluexin.mcui.themes.HudItemSource
@@ -57,6 +62,7 @@ class LegacyElementAdapter(
             enabled = enabled(body["enabled"], "$path.enabled"),
             transform = transform(body, path),
             children = children,
+            animations = animations(body, path),
         )
     }
 
@@ -79,6 +85,7 @@ class LegacyElementAdapter(
         val elementPath = "$path.${encodedName ?: discriminator.substringBefore(':')}"
         return when (type) {
             "elementgroup", "group", "fragment" -> adaptGroup(body.withName(encodedName), elementPath, inheritedTexture)
+            "widget" -> adaptWidget(body.withName(encodedName), elementPath, inheritedTexture)
             "glrectangle", "rectangle", "texture", "image" ->
                 adaptRectangle(body.withName(encodedName), elementPath, inheritedTexture)
             "glstring", "text" -> adaptText(body.withName(encodedName), elementPath)
@@ -116,6 +123,7 @@ class LegacyElementAdapter(
                 name = stringValue(body["name"]),
                 enabled = enabled(body["enabled"], "$path.enabled"),
                 transform = transform(body, path),
+                animations = animations(body, path),
                 width = width,
                 height = height,
                 direction = ProgressDirection.LEFT_TO_RIGHT,
@@ -130,6 +138,7 @@ class LegacyElementAdapter(
                 name = stringValue(body["name"]),
                 enabled = enabled(body["enabled"], "$path.enabled"),
                 transform = transform(body, path),
+                animations = animations(body, path),
                 width = width,
                 height = height,
                 texture = texture,
@@ -148,6 +157,7 @@ class LegacyElementAdapter(
                 name = stringValue(body["name"]),
                 enabled = enabled(body["enabled"], "$path.enabled"),
                 transform = transform(body, path),
+                animations = animations(body, path),
                 width = width,
                 height = height,
                 color = color,
@@ -173,6 +183,7 @@ class LegacyElementAdapter(
             name = stringValue(body["name"]),
             enabled = enabled(body["enabled"], "$path.enabled"),
             transform = base.copy(y = base.y + legacyHeight / 2.0),
+            animations = animations(body, path),
             text = literal,
             valueSource = dynamicValue,
             textSource = dynamicText,
@@ -188,15 +199,15 @@ class LegacyElementAdapter(
             warning("$path.id", "Legacy FragmentReference is missing id")
             return null
         }
-        if (body["variables"] != null) {
-            warning("$path.variables", "Legacy fragment variables are deferred; only fragment defaults/static structure are used")
-        }
+        val arguments = fragmentArguments(body["arguments"] ?: body["variables"], "$path.variables")
         return ElementDefinition(
             type = "fragment_reference",
             name = stringValue(body["name"]),
             enabled = enabled(body["enabled"], "$path.enabled"),
             transform = transform(body, path),
             fragment = id,
+            fragmentArguments = arguments,
+            animations = animations(body, path),
         )
     }
 
@@ -227,6 +238,7 @@ class LegacyElementAdapter(
             enabled = enabled(body["enabled"], "$path.enabled"),
             transform = transform(body, path),
             children = listOfNotNull(background?.copy(transform = TransformDefinition()), item),
+            animations = animations(body, path),
         )
     }
 
@@ -271,6 +283,7 @@ class LegacyElementAdapter(
             name = stringValue(body["name"]),
             enabled = enabled(body["enabled"], "$path.enabled"),
             transform = adjusted,
+            animations = animations(body, path),
             slotSize = slotSize,
             slotSpacing = spacing,
             itemXOffset = staticInt(item["itemXoffset"], "$path.itemXoffset", 2) ?: 2,
@@ -280,6 +293,112 @@ class LegacyElementAdapter(
             orientation = orientation,
             decorations = true,
         )
+    }
+
+    private fun adaptWidget(body: JsonObject, path: String, inheritedTexture: String?): ElementDefinition? {
+        listOf("onClick", "onMouseOver", "onLoseFocus", "tooltip", "active").forEach { field ->
+            if (body[field] != null) warning("$path.$field", "Legacy Widget interaction '$field' is deferred to the screen phase")
+        }
+        return adaptGroup(body, path, inheritedTexture)
+    }
+
+    private fun fragmentArguments(node: JsonElement?, path: String): FragmentArguments {
+        val body = node as? JsonObject ?: run {
+            if (node != null && node !is JsonNull) warning(path, "Unsupported legacy fragment variables; only literal object overrides are accepted")
+            return FragmentArguments()
+        }
+        val recognized = setOf("enabled", "x", "y", "z", "scale", "color", "text", "texture", "tint")
+        body.keys.filterNot(recognized::contains).forEach { key ->
+            warning("$path.$key", "Unsupported fragment argument '$key'; literal root-field overrides only")
+        }
+        return FragmentArguments(
+            enabled = expression(body["enabled"])?.toBooleanStrictOrNull(),
+            x = staticDoubleOrNull(body["x"]),
+            y = staticDoubleOrNull(body["y"]),
+            z = staticDoubleOrNull(body["z"]),
+            scale = staticDoubleOrNull(body["scale"]),
+            color = color(body["color"], "$path.color"),
+            text = stringValue(body["text"]),
+            texture = stringValue(body["texture"]),
+            tint = color(body["tint"], "$path.tint"),
+        )
+    }
+
+    private fun animations(body: JsonObject, path: String): List<AnimationDefinition> {
+        val node = body["animations"] ?: body["animation"] ?: return emptyList()
+        val entries = when (node) {
+            is JsonArray -> node
+            is JsonObject -> JsonArray(listOf(node))
+            else -> {
+                warning("$path.animations", "Legacy animator must be an object or array; animator deferred")
+                return emptyList()
+            }
+        }
+        return entries.mapIndexedNotNull { index, entry ->
+            val animation = entry as? JsonObject ?: run {
+                warning("$path.animations[$index]", "Legacy animator entry must be an object")
+                return@mapIndexedNotNull null
+            }
+            val field = "$path.animations[$index]"
+            val propertyName = stringValue(animation["property"] ?: animation["target"])?.lowercase()?.replace("-", "_")
+            val property = when (propertyName) {
+                "alpha", "opacity" -> AnimationProperty.ALPHA
+                "x", "translation_x", "translate_x" -> AnimationProperty.TRANSLATION_X
+                "y", "translation_y", "translate_y" -> AnimationProperty.TRANSLATION_Y
+                "scale" -> AnimationProperty.SCALE
+                "progress", "value" -> AnimationProperty.PROGRESS
+                "color", "rgba", "argb" -> AnimationProperty.COLOR
+                else -> {
+                    warning("$field.property", "Unsupported legacy animator property '$propertyName'; animator deferred")
+                    return@mapIndexedNotNull null
+                }
+            }
+            val easingName = stringValue(animation["easing"])?.uppercase()?.replace('-', '_') ?: "LINEAR"
+            val easing = when (easingName.replace("EASEIN", "EASE_IN").replace("EASEOUT", "EASE_OUT")) {
+                "LINEAR" -> AnimationEasing.LINEAR
+                "EASE_IN", "EASE_IN_QUAD", "QUAD_IN" -> AnimationEasing.QUAD_IN
+                "EASE_OUT", "EASE_OUT_QUAD", "QUAD_OUT" -> AnimationEasing.QUAD_OUT
+                "EASE_IN_OUT", "EASE_IN_OUT_QUAD", "QUAD_IN_OUT" -> AnimationEasing.QUAD_IN_OUT
+                "EASE_IN_CUBIC", "CUBIC_IN" -> AnimationEasing.CUBIC_IN
+                "EASE_OUT_CUBIC", "CUBIC_OUT" -> AnimationEasing.CUBIC_OUT
+                "EASE_IN_OUT_CUBIC", "CUBIC_IN_OUT" -> AnimationEasing.CUBIC_IN_OUT
+                else -> {
+                    warning("$field.easing", "Unsupported legacy easing '$easingName'; using LINEAR")
+                    AnimationEasing.LINEAR
+                }
+            }
+            val trigger = when (stringValue(animation["trigger"])?.uppercase()) {
+                null, "ON_SHOW", "SHOW" -> AnimationTrigger.ON_SHOW
+                "ON_HIDE", "HIDE" -> AnimationTrigger.ON_HIDE
+                "ON_VALUE_CHANGE", "VALUE_CHANGE", "CHANGE" -> AnimationTrigger.ON_VALUE_CHANGE
+                else -> {
+                    warning("$field.trigger", "Unsupported legacy animator trigger; animator deferred")
+                    return@mapIndexedNotNull null
+                }
+            }
+            val from = animationValue(animation["from"], property, "$field.from")
+            val to = animationValue(animation["to"], property, "$field.to")
+            AnimationDefinition(
+                property = property,
+                duration = staticInt(animation["duration"], "$field.duration", 200) ?: 200,
+                delay = staticInt(animation["delay"] ?: animation["start"], "$field.delay", 0) ?: 0,
+                easing = easing,
+                from = from,
+                to = to,
+                trigger = trigger,
+            )
+        }
+    }
+
+    private fun animationValue(node: JsonElement?, property: AnimationProperty, path: String): Double? {
+        if (node == null || node is JsonNull) return null
+        if (property == AnimationProperty.COLOR) {
+            return color(node, path)?.value?.toUInt()?.toLong()?.toDouble()
+        }
+        return staticDoubleOrNull(node) ?: run {
+            warning(path, "Legacy animator endpoint must be a literal number")
+            null
+        }
     }
 
     private fun textureRegion(
@@ -362,6 +481,7 @@ class LegacyElementAdapter(
             "airpercent", "airpct" -> HudValueSource.AIR
             "experience" -> HudValueSource.EXPERIENCE_PROGRESS
             "horsejump" -> HudValueSource.JUMP_PROGRESS
+            "targethppct" -> HudValueSource.TARGET_HEALTH
             else -> return null
         }
         return width to source
@@ -377,13 +497,20 @@ class LegacyElementAdapter(
             normalized in setOf("armor", "player.armor") -> HudValueSource.ARMOR
             normalized == "level" || normalized == "player.level" ||
                 (normalized.startsWith("format(") && "level" in normalized) -> HudValueSource.EXPERIENCE_LEVEL
+            normalized in setOf("targethp", "target.health") -> HudValueSource.TARGET_HEALTH
             else -> null
         }
     }
 
-    private fun textSource(raw: String): HudTextSource? = when (raw.lowercase().replace(" ", "")) {
-        "username", "player.displayname", "player.name" -> HudTextSource.PLAYER_NAME
-        else -> null
+    private fun textSource(raw: String): HudTextSource? {
+        val normalized = raw.lowercase().replace(" ", "")
+        return when {
+            normalized in setOf("username", "player.displayname", "player.name") -> HudTextSource.PLAYER_NAME
+            normalized in setOf("targetname", "target.name") -> HudTextSource.TARGET_NAME
+            "targetname" in normalized && "targethp" in normalized && "targetmaxhp" in normalized ->
+                HudTextSource.TARGET_HEALTH_SUMMARY
+            else -> null
+        }
     }
 
     private fun staticText(raw: String?): String? {
@@ -493,7 +620,7 @@ class LegacyElementAdapter(
     private companion object {
         val HOTBAR_ITEM_TYPES = setOf("glhotbaritem", "hotbaritem")
         val PROGRESS_PATTERN = Regex(
-            "^(\\d+(?:\\.\\d+)?)\\*(?:player\\.)?(healthPercent|hpPct|foodPercent|foodPct|airPercent|airPct|experience|horseJump)$",
+            "^(\\d+(?:\\.\\d+)?)\\*(?:player\\.)?(healthPercent|hpPct|foodPercent|foodPct|airPercent|airPct|experience|horseJump|targetHpPct)$",
             RegexOption.IGNORE_CASE,
         )
     }

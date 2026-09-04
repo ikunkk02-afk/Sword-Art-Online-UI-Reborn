@@ -13,6 +13,8 @@ import be.bluexin.mcui.render.ArgbColor
 import be.bluexin.mcui.render.RenderContext
 import be.bluexin.mcui.render.ResolvedRenderState
 import be.bluexin.mcui.render.ResolvedTransform
+import be.bluexin.mcui.animation.ResolvedAnimationSpec
+import be.bluexin.mcui.animation.ResolvedHealthAnimationSpec
 import be.bluexin.mcui.themes.HudEffectIconSet
 import be.bluexin.mcui.themes.HudItemSource
 import be.bluexin.mcui.themes.HotbarOrientation
@@ -42,6 +44,7 @@ interface ElementVisitor {
     fun visit(element: HotbarElement, context: RenderContext)
     fun visit(element: EffectListElement, context: RenderContext)
     fun visit(element: EntityHealthListElement, context: RenderContext)
+    fun visit(element: TargetEntityHealthElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -142,6 +145,8 @@ data class TexturedProgressBarElement(
     val clip: Boolean,
     val valueTints: List<ProgressTint> = emptyList(),
     val creativeTint: ArgbColor? = null,
+    val delayedForeground: TextureRegion? = null,
+    val healthAnimation: ResolvedHealthAnimationSpec? = null,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
@@ -205,6 +210,7 @@ data class EffectListElement(
     val iconSize: Int = 18,
     val iconSet: HudEffectIconSet = HudEffectIconSet.VANILLA,
     val includePlayerStates: Boolean = false,
+    val entryAnimations: List<ResolvedAnimationSpec> = emptyList(),
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }
@@ -218,6 +224,20 @@ data class EntityHealthListElement(
     val background: TextureRegion,
     val foreground: TextureRegion,
     val textColor: ArgbColor,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+/** Optional legacy target card; the bundled SAO theme continues to use its historical nearby list. */
+data class TargetEntityHealthElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val width: Int,
+    val height: Int,
+    val background: TextureRegion,
+    val foreground: TextureRegion,
+    val textColor: ArgbColor,
+    val lingerMillis: Int = 3000,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }

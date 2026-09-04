@@ -522,6 +522,55 @@ Verified on 2026-09-04 with the configured Java 21 toolchain:
 - Manual-validation correction: the same Kotlin compile selection succeeded after fixing the effect-icon texture call's missing zero-origin UV arguments.
 - No tests, client launch, world entry, resource reload, screenshot, input simulation, temporary resource pack, or game-runtime validation was performed. Runtime behavior remains **awaiting manual user validation**.
 
+## Phase-six HUD animation and advanced legacy behavior
+
+Status: **Implemented; awaiting manual user validation.** No client launch, world entry, F3+T, screenshot test, temporary resource pack, or new unit test is part of this phase.
+
+### Historical behavior recovered
+
+- The 1.16.5 and 1.19.4-port trees contain the LibrarianLib-derived `Animator`, `Animation`, `BasicAnimation`, `AnimatableProperty`, lerper registry, scheduled events, easing functions, and reflection/MethodHandle `InvocationWrapper` path. They could animate position, scale, opacity, primitive progress values, vectors, colors, strings, delays, durations, repeats, and reversals. Phase six restores the visible subset through typed state and does not restore reflection, invocation wrappers, old GL state, or script execution.
+- Historical HUD health/hunger data used frame-rate-compensated smoothing. Historical `GLHotbarItem` reproduced the vanilla item pop transform; there was no selected-frame movement. The modern hotbar restores item pop and adds the requested conservative, theme-configured selected-frame transition.
+- No historical delayed-damage ghost bar was found. The modern two-layer damage response is a new phase-six behavior requested for the SAO HUD, with all texture/color/timing data in the theme.
+- The bundled SAO `ENTITY_HEALTH_HUD` is a nearby-living-entity list: candidates came from a 20x10x20 box, the nearest five were selected, then ordered by health ratio. The runtime also exposed a crosshair target. The 1.12 feature branch retained that target for 60 ticks; 1.16.5 accidentally omitted its clear path. The modern implementation uses the explicit 60-tick/3000ms behavior and does not invent attack-history or lock-on targeting.
+
+### Modern animation architecture
+
+- **AnimationClock — Implemented, awaiting manual user validation.** One `System.nanoTime()` sample and a measured delta are shared by a HUD frame, so duration is independent of FPS. The time source is injectable and resets on theme replacement.
+- **Easing — Implemented, awaiting manual user validation.** Supported names are `LINEAR`, `EASE_IN`, `EASE_OUT`, `EASE_IN_OUT`, quadratic in/out/in-out, and cubic in/out/in-out.
+- **FloatTransition / TimedTransition — Implemented, awaiting manual user validation.** Transitions are interruptible, keep display and target values separately, support delay/duration/easing, and allocate no per-frame lambdas.
+- **AnimationDefinition / compiler — Implemented, awaiting manual user validation.** Theme JSON supports `property`, `duration`, `delay`, `easing`, `from`, `to`, and `trigger`; triggers are `ON_SHOW`, `ON_HIDE`, and `ON_VALUE_CHANGE`. Compilation produces immutable `ResolvedAnimationSpec`. Unknown properties/triggers/easing values are warnings and are deferred without invalidating the theme.
+- **AnimationRegistry — Implemented, awaiting manual user validation.** Mutable state is keyed by stable compiler paths, only active generic element states are globally advanced, and one failing state is isolated and logged once with theme and element/property context.
+- **Resource reload reset — Implemented, awaiting manual user validation.** A resource revision or active-theme ID change clears all runtime animation state and starts a clean entry lifecycle.
+
+### HUD runtime behavior
+
+- **Smooth Progress — Implemented, awaiting manual user validation.** `ProgressBarElement` and `TexturedProgressBarElement` consume the animated display ratio supplied by runtime state; snapshots keep the real value and renderers do not own time. Food uses a short 160ms theme transition. Air and jump progress remain immediate for accurate feedback.
+- **Delayed Damage Bar — Implemented, awaiting manual user validation.** `HealthAnimationState` maintains target, main display, and delayed ratios. Damage starts a fast main transition and holds a theme-supplied ghost texture before its delayed transition. The bundled SAO theme uses the historical HP strip with an orange theme tint for the ghost.
+- **Healing — Implemented, awaiting manual user validation.** Healing smoothly raises the main bar, snaps the delayed ratio to the new target, and disables damage-ghost rendering so no reverse red/orange trail appears. Health text continues to show real snapshot values.
+- **Animated Alpha / Transform / Scale / Color — Implemented, awaiting manual user validation.** Runtime alpha multiplies down the group tree without mutating source ARGB values; translation is added after the static theme transform; scale multiplies the static scale. Packed ARGB interpolation is direct per-channel lerp. Item geometry keeps native Minecraft rendering.
+- **HUD Part Lifecycle — Implemented, awaiting manual user validation.** Parts move through `HIDDEN`, `ENTERING`, `VISIBLE`, and `EXITING` from `HudPartVisibility` targets. AIR, JUMP_BAR, MOUNT_HEALTH, EFFECTS, and ENTITY_HEALTH_HUD can finish exit animation after their logical condition becomes false.
+- **Hotbar Selection — Implemented, awaiting manual user validation.** The selected frame moves between slot positions with a theme-defined 180ms ease-out transition. The historical per-stack item pop transform is also restored from immutable stack/pop-time snapshot data.
+- **Effect Animation — Implemented, awaiting manual user validation.** Effect entries are tracked by effect ID plus amplifier, duration changes do not restart animation, new entries fade/slide in, and removed immutable snapshots remain only through fade/slide out. No `MobEffectInstance` is retained.
+- **Target Entity HUD — Implemented, awaiting manual user validation.** `TargetEntitySnapshot` contains entity ID, display name, health, maximum health, entity type, distance, alive state, and optional armor. A typed `target_entity_health` element supports a 3000ms linger and lifecycle rendering. The official SAO theme keeps its historically correct nearby list rather than adding a fabricated target card. Historical aggression/color-state filtering remains unavailable because its removed capability system has not been restored.
+
+### Fragment and legacy compatibility
+
+- **Fragment Advanced — Implemented, awaiting manual user validation.** Nested fragments, duplicate instances with independent state keys, cycle detection, missing-reference diagnostics, reference-local transform/enabled state, and literal root overrides for enabled, position, scale, color, text, texture, and tint resolve during resource reload.
+- **Widget / ElementParent — Implemented, awaiting manual user validation.** HUD-safe Widget children, enabled state, transform, and inherited texture adapt to a modern Group. Mouse, click, focus, tooltip, and scripts remain deferred to the screen phase with explicit warnings.
+- **Legacy Animator Compatibility — Implemented, awaiting manual user validation.** Legacy JSON adapters accept literal `animation`/`animations` objects for duration, delay/start, easing, from, to, trigger, alpha/opacity, x/y translation, scale, progress/value, and packed color. Unsupported entries warn and are skipped; no old animator, reflection, Lua, MiniScript, JEL, XML runtime, Koin, KSP, or GL draw path is enabled.
+
+### Bundled SAO theme animation set
+
+- Player health: 150ms main response, 240ms damage hold, 420ms delayed damage fall, 180ms healing rise, theme-defined HP and ghost textures/tints.
+- Hotbar: 180ms vertical selected-frame movement.
+- Air: fade plus a six-pixel horizontal entrance/exit offset; the air ratio itself remains immediate.
+- Mount health: lifecycle fade/slide specification retained even though the stable SAO theme intentionally has no mount artwork.
+- Jump: lifecycle fade/slide only; jump charge remains immediate.
+- Effects: part fade and per-effect fade/five-pixel slide, with stable effect tracking.
+- Nearby entity list: short fade/slide lifecycle and the historical five-entry cap.
+
+No new Mixin was added in phase six.
+
 ## Phase-one verification record
 
 Verified on 2026-09-04 with Microsoft OpenJDK 21.0.8.9:

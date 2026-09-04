@@ -27,6 +27,10 @@ object HudBindingResolver {
             append(" / ")
             append(format(data.playerMaxHealth))
         }
+        HudTextSource.TARGET_NAME -> data.targetEntity?.displayName.orEmpty()
+        HudTextSource.TARGET_HEALTH_SUMMARY -> data.targetEntity?.let {
+            "${it.displayName} (${format(it.health)} / ${format(it.maxHealth)})"
+        }.orEmpty()
     }
 
     fun progress(source: HudValueSource, data: HudDataSnapshot): Float = when (source) {
@@ -46,6 +50,7 @@ object HudBindingResolver {
         HudValueSource.MOUNT_MAX_HEALTH -> if (data.hasLivingMount) 1f else 0f
         HudValueSource.JUMP_PROGRESS -> data.jumpProgress.coerceIn(0f, 1f)
         HudValueSource.HOTBAR_SELECTED_SLOT -> data.selectedHotbarSlot / 8f
+        HudValueSource.TARGET_HEALTH -> data.targetEntity?.let { ratio(it.health, it.maxHealth) } ?: 0f
     }
 
     fun text(source: HudValueSource, data: HudDataSnapshot): String = when (source) {
@@ -65,6 +70,7 @@ object HudBindingResolver {
         HudValueSource.MOUNT_MAX_HEALTH -> format(data.mountMaxHealth)
         HudValueSource.JUMP_PROGRESS -> format(data.jumpProgress)
         HudValueSource.HOTBAR_SELECTED_SLOT -> data.selectedHotbarSlot.toString()
+        HudValueSource.TARGET_HEALTH -> data.targetEntity?.let { format(it.health) }.orEmpty()
     }
 
     fun item(source: HudItemSource, data: HudDataSnapshot): ItemStack = when (source) {
