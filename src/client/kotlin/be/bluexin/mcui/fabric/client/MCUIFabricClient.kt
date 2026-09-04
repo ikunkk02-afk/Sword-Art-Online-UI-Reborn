@@ -10,12 +10,14 @@
 package be.bluexin.mcui.fabric.client
 
 import be.bluexin.mcui.Constants
+import be.bluexin.mcui.fabric.client.hud.MCUIHudRenderer
 import be.bluexin.mcui.fabric.client.resources.ClientResourceReloads
 import net.fabricmc.api.ClientModInitializer
 
 object MCUIFabricClient : ClientModInitializer {
     override fun onInitializeClient() {
         ClientResourceReloads.register()
+        MCUIHudRenderer.register()
         Constants.LOG.info("MCUI client foundation initialized")
     }
 }

@@ -25,6 +25,13 @@ loom {
 	}
 }
 
+// Rendering tests exercise client-source abstractions with fake operations;
+// no Minecraft window or renderer is started by the unit-test task.
+sourceSets.test {
+	compileClasspath += sourceSets.getByName("client").output
+	runtimeClasspath += sourceSets.getByName("client").output
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft("com.mojang:minecraft:${providers.gradleProperty("minecraft_version").get()}")
