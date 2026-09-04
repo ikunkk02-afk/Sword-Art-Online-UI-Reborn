@@ -184,6 +184,8 @@ data class ThemeDefinition(
     val metadataResource: String,
     val hudResource: String,
     val sourcePack: String,
+    val screenDocument: ScreenThemeDefinition? = null,
+    val screenResource: String? = null,
 )
 
 enum class ThemeIssueSeverity { WARNING, ERROR }

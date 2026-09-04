@@ -63,6 +63,7 @@ class ThemeCompiler(
         if (definition.document.root == null && definition.document.parts.isEmpty()) {
             issues.error(definition, "hud", "HUD must define root and/or at least one part")
         }
+        val compiledScreens = compileScreenTheme(definition, issues)
         val validation = ThemeValidationResult(issues.toList())
         val theme = if (validation.isValid) {
             val resolvedHud = ResolvedHud(
@@ -73,6 +74,7 @@ class ThemeCompiler(
                 id = definition.id,
                 metadata = definition.metadata,
                 hud = resolvedHud,
+                screens = compiledScreens,
                 sourcePack = definition.sourcePack,
                 sourceResource = definition.hudResource,
                 elementCount = listOfNotNull(compiledRoot).sumOf(::countElements) +
@@ -82,6 +84,86 @@ class ThemeCompiler(
             null
         }
         return ThemeCompileResult(theme, validation)
+    }
+
+    private fun compileScreenTheme(
+        definition: ThemeDefinition,
+        issues: MutableList<ThemeIssue>,
+    ): ResolvedScreenTheme {
+        val document = definition.screenDocument ?: return ResolvedScreenTheme.FALLBACK
+        val resource = definition.screenResource ?: definition.hudResource
+        if (document.version != "1") {
+            issues += ThemeIssue(
+                ThemeIssueSeverity.WARNING,
+                resource,
+                definition.id,
+                "screens.version",
+                "Unsupported screen theme version '${document.version}'; using built-in screen style",
+            )
+            return ResolvedScreenTheme.FALLBACK
+        }
+
+        fun warn(field: String, message: String) {
+            issues += ThemeIssue(ThemeIssueSeverity.WARNING, resource, definition.id, field, message)
+        }
+
+        val opacityValues = listOf(
+            "menuBackground" to document.opacity.menuBackground,
+            "worldOverlay" to document.opacity.worldOverlay,
+            "panel" to document.opacity.panel,
+            "disabled" to document.opacity.disabled,
+            "icon" to document.opacity.icon,
+        )
+        if (opacityValues.any { (_, value) -> !value.isFinite() || value !in 0.0..1.0 }) {
+            opacityValues.filter { (_, value) -> !value.isFinite() || value !in 0.0..1.0 }
+                .forEach { (field, value) -> warn("screens.opacity.$field", "Opacity must be within 0..1, got $value") }
+            return ResolvedScreenTheme.FALLBACK
+        }
+
+        val fallback = ScreenThemeDefinition()
+        fun requiredTexture(raw: String, fallbackRaw: String, field: String): String {
+            val location = ResourceLocation.tryParse(raw)
+            if (location == null || !textureExists(location)) {
+                warn(
+                    "screens.textures.$field",
+                    if (location == null) "Invalid texture '$raw'; using built-in fallback"
+                    else "Texture '$location' is missing; using built-in fallback",
+                )
+                return fallbackRaw
+            }
+            return raw
+        }
+
+        val optionalBackground = document.textures.menuBackground?.let { raw ->
+            val location = ResourceLocation.tryParse(raw)
+            if (location == null || !textureExists(location)) {
+                warn(
+                    "screens.textures.menuBackground",
+                    if (location == null) "Invalid texture '$raw'; using gradient background"
+                    else "Texture '$location' is missing; using gradient background",
+                )
+                null
+            } else raw
+        }
+        val normalized = document.copy(
+            textures = document.textures.copy(
+                menuBackground = optionalBackground,
+                logo = requiredTexture(document.textures.logo, fallback.textures.logo, "logo"),
+                profileBackground = requiredTexture(
+                    document.textures.profileBackground,
+                    fallback.textures.profileBackground,
+                    "profileBackground",
+                ),
+                dialogBackground = requiredTexture(
+                    document.textures.dialogBackground,
+                    fallback.textures.dialogBackground,
+                    "dialogBackground",
+                ),
+                slot = requiredTexture(document.textures.slot, fallback.textures.slot, "slot"),
+                death = requiredTexture(document.textures.death, fallback.textures.death, "death"),
+            ),
+        )
+        return ResolvedScreenTheme.fromDefinition(normalized)
     }
 
     private fun validateMetadata(definition: ThemeDefinition, issues: MutableList<ThemeIssue>) {

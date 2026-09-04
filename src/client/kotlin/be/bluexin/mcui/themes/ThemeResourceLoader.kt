@@ -108,13 +108,23 @@ class ThemeResourceLoader(
                 failed++
                 return@forEach
             }
+            val screensLocation = ResourceLocation.fromNamespaceAndPath(metadataLocation.namespace, "$rootPath/screens.json")
+            val screensResource = resourceManager.getResource(screensLocation).orElse(null)
+            val screenDocument = screensResource?.let { resource ->
+                parseScreens(screensLocation, resource, themeId, issues)
+            }
             definitions += ThemeDefinition(
                 id = themeId,
                 metadata = metadata,
                 document = document,
                 metadataResource = metadataLocation.toString(),
                 hudResource = hudLocation.toString(),
-                sourcePack = "metadata=${metadataResource.sourcePackId()}, hud=${hudResource.sourcePackId()}",
+                sourcePack = buildString {
+                    append("metadata=${metadataResource.sourcePackId()}, hud=${hudResource.sourcePackId()}")
+                    screensResource?.let { append(", screens=${it.sourcePackId()}") }
+                },
+                screenDocument = screenDocument,
+                screenResource = screensLocation.toString(),
             )
         }
 
@@ -236,6 +246,36 @@ class ThemeResourceLoader(
             )
             return null
         }.also { issues += it.issues }.document
+    }
+
+    private fun parseScreens(
+        location: ResourceLocation,
+        resource: Resource,
+        themeId: ThemeId,
+        issues: MutableList<ThemeIssue>,
+    ): ScreenThemeDefinition? {
+        val text = try {
+            resource.openAsReader().use { it.readText() }
+        } catch (cause: Exception) {
+            issues += ThemeIssue(
+                ThemeIssueSeverity.WARNING,
+                location.toString(),
+                themeId,
+                "screens",
+                "Could not read screens.json from pack '${resource.sourcePackId()}'; using built-in screen style: ${cause.message}",
+            )
+            return null
+        }
+        return parser.parseScreens(text).getOrElse { cause ->
+            issues += ThemeIssue(
+                ThemeIssueSeverity.WARNING,
+                location.toString(),
+                themeId,
+                "screens",
+                "Malformed screens.json; using built-in screen style: ${cause.message}",
+            )
+            null
+        }
     }
 
     private fun readResource(

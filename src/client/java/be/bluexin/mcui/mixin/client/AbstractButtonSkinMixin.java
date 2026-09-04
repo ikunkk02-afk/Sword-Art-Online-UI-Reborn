@@ -6,6 +6,8 @@
 package be.bluexin.mcui.mixin.client;
 
 import be.bluexin.mcui.screens.SaoUiStyle;
+import be.bluexin.mcui.screens.SaoScreenPolicy;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -23,6 +25,8 @@ public abstract class AbstractButtonSkinMixin extends AbstractWidget {
 
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
     private void mcui$renderSaoButton(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+        Minecraft client = Minecraft.getInstance();
+        if (!SaoScreenPolicy.shouldSkinWidgets(client.screen)) return;
         SaoUiStyle.renderButton(
             graphics,
             getX(),
@@ -30,8 +34,11 @@ public abstract class AbstractButtonSkinMixin extends AbstractWidget {
             getWidth(),
             getHeight(),
             getMessage(),
-            isHoveredOrFocused(),
+            isHovered(),
+            isFocused(),
+            isHovered() && client.mouseHandler.isLeftPressed(),
             active,
+            false,
             alpha,
             null,
             false

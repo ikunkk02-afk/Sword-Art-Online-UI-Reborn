@@ -6,6 +6,8 @@
 package be.bluexin.mcui.mixin.client;
 
 import be.bluexin.mcui.screens.SaoUiStyle;
+import be.bluexin.mcui.screens.SaoScreenPolicy;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -26,6 +28,8 @@ public abstract class AbstractSliderButtonSkinMixin extends AbstractWidget {
 
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
     private void mcui$renderSaoSlider(GuiGraphics graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+        Minecraft client = Minecraft.getInstance();
+        if (!SaoScreenPolicy.shouldSkinWidgets(client.screen)) return;
         SaoUiStyle.renderSlider(
             graphics,
             getX(),
@@ -33,7 +37,9 @@ public abstract class AbstractSliderButtonSkinMixin extends AbstractWidget {
             getWidth(),
             getHeight(),
             getMessage(),
-            isHoveredOrFocused(),
+            isHovered(),
+            isFocused(),
+            isHovered() && client.mouseHandler.isLeftPressed(),
             active,
             alpha,
             value

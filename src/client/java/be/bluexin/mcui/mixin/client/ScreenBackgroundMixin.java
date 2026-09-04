@@ -6,6 +6,7 @@
 package be.bluexin.mcui.mixin.client;
 
 import be.bluexin.mcui.screens.SaoUiStyle;
+import be.bluexin.mcui.screens.SaoScreenPolicy;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,6 +29,8 @@ public abstract class ScreenBackgroundMixin {
         int bottom,
         CallbackInfo ci
     ) {
+        Screen self = (Screen) (Object) this;
+        if (!SaoScreenPolicy.shouldReplaceMenuBackground(self)) return;
         SaoUiStyle.renderMenuBackground(graphics, left, top, right, bottom);
         ci.cancel();
     }

@@ -22,6 +22,7 @@
   "mcui.screen.logout.title": "退出世界",
   "mcui.screen.logout.body": "确定返回标题界面吗？",
   "mcui.screen.death.leave": "确定离开当前世界吗？",
-  "mcui.screen.notice.static": "仓库内置的 SAO 界面均使用无动画静态渲染。",
-  "mcui.screen.notice.integrations": "公会、队伍、地图与饰品功能缺少历史服务端依赖。"
+  "mcui.screen.notice.framework": "界面视觉由当前 MCUI 资源主题提供。",
+  "mcui.screen.notice.integrations": "公会、队伍、地图与饰品功能缺少历史服务端依赖。",
+  "mcui.screen.unavailable": "此集成功能目前不可用。"
 }

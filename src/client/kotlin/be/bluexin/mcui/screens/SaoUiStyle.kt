@@ -1,72 +1,102 @@
 /*
  * Copyright (C) 2016-2024 Arnaud 'Bluexin' Solé
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
 package be.bluexin.mcui.screens
 
+import be.bluexin.mcui.themes.MCUIThemes
+import be.bluexin.mcui.themes.ResolvedScreenTheme
 import be.bluexin.mcui.util.legacyMcuiId
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 
-/** Shared, immediate-mode SAO screen styling. No animation state is retained. */
+/** Immediate-mode render helpers backed by the immutable active screen-theme snapshot. */
 object SaoUiStyle {
-    const val TEXT = 0xFF555555.toInt()
-    const val MUTED_TEXT = 0xFF888888.toInt()
-    const val LIGHT_TEXT = 0xFFFFFFFF.toInt()
-    const val GOLD = 0xFFC99B13.toInt()
-    const val GOLD_LIGHT = 0xFFFFD76A.toInt()
-    const val DISABLED = 0xFF7C7C7C.toInt()
-    const val PANEL = 0xE8FFFFFF.toInt()
-    const val PANEL_DARK = 0xD92B3038.toInt()
-    const val SHADOW = 0x99000000.toInt()
+    private val style: ResolvedScreenTheme
+        get() = MCUIThemes.manager.activeTheme.screens
 
-    @JvmField
-    val LOGO: ResourceLocation = legacyMcuiId("textures/logo.png")
+    @get:JvmStatic val TEXT: Int get() = style.colors.text
+    @get:JvmStatic val MUTED_TEXT: Int get() = style.colors.mutedText
+    @get:JvmStatic val LIGHT_TEXT: Int get() = style.colors.lightText
+    @get:JvmStatic val GOLD: Int get() = style.colors.accent
+    @get:JvmStatic val GOLD_LIGHT: Int get() = style.colors.accentLight
+    @get:JvmStatic val DISABLED: Int get() = style.colors.buttonDisabled
+    @get:JvmStatic val PANEL: Int get() = style.colors.panel
+    @get:JvmStatic val PANEL_DARK: Int get() = style.colors.panelDark
+    @get:JvmStatic val SHADOW: Int get() = style.colors.panelShadow
+    @get:JvmStatic val TITLE: Int get() = style.colors.title
 
-    @JvmField
-    val PROFILE_BACKGROUND: ResourceLocation = legacyMcuiId("textures/menu/parts/profilebg.png")
+    val LOGO: ResourceLocation get() = style.textures.logo
+    val PROFILE_BACKGROUND: ResourceLocation get() = style.textures.profileBackground
+    val ALERT_BACKGROUND: ResourceLocation get() = style.textures.dialogBackground
+    val SLOT: ResourceLocation get() = style.textures.slot
+    val DEATH: ResourceLocation get() = style.textures.death
 
-    @JvmField
-    val ALERT_BACKGROUND: ResourceLocation = legacyMcuiId("textures/menu/parts/alertbg.png")
-
-    @JvmField
-    val SLOT: ResourceLocation = legacyMcuiId("textures/slot.png")
-
-    @JvmField
-    val DEATH: ResourceLocation = legacyMcuiId("textures/hud/buttons/death.png")
+    @JvmStatic
+    fun current(): ResolvedScreenTheme = style
 
     @JvmStatic
     fun renderMenuBackground(graphics: GuiGraphics, left: Int, top: Int, right: Int, bottom: Int) {
-        graphics.fillGradient(left, top, right, bottom, 0xF02B3038.toInt(), 0xF015181E.toInt())
+        val colors = style.colors
+        style.textures.menuBackground?.let { texture ->
+            setColor(graphics, 0xFFFFFFFF.toInt(), style.opacity.menuBackground)
+            graphics.blit(texture, left, top, right - left, bottom - top, 0f, 0f, 256, 256, 256, 256)
+            resetColor(graphics)
+            return
+        }
+        graphics.fillGradient(
+            left,
+            top,
+            right,
+            bottom,
+            multiplyAlpha(colors.background, style.opacity.menuBackground),
+            multiplyAlpha(colors.backgroundSecondary, style.opacity.menuBackground),
+        )
         val center = (left + right) / 2
-        graphics.fill(left, top, center, bottom, 0x122DD8C7)
-        graphics.fill(center, top, right, bottom, 0x0CC99B13)
+        graphics.fill(left, top, center, bottom, multiplyAlpha(colors.worldOverlayAccent, 0.75f))
+        graphics.fill(center, top, right, bottom, multiplyAlpha(colors.accent, 0.05f))
     }
 
     @JvmStatic
     fun renderInWorldBackground(graphics: GuiGraphics, width: Int, height: Int) {
-        graphics.fill(0, 0, width, height, 0x66000000)
-        graphics.fillGradient(0, 0, width, height, 0x182DD8C7, 0x1815181E)
+        val opacity = style.opacity.worldOverlay
+        graphics.fill(0, 0, width, height, multiplyAlpha(style.colors.worldOverlay, opacity))
+        graphics.fillGradient(
+            0,
+            0,
+            width,
+            height,
+            multiplyAlpha(style.colors.worldOverlayAccent, opacity),
+            multiplyAlpha(style.colors.backgroundSecondary, 0.1f * opacity),
+        )
     }
 
     @JvmStatic
-    fun renderPanel(graphics: GuiGraphics, x: Int, y: Int, width: Int, height: Int, dark: Boolean = false) {
+    @JvmOverloads
+    fun renderPanel(
+        graphics: GuiGraphics,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        dark: Boolean = false,
+        alpha: Float = 1f,
+    ) {
         if (width <= 0 || height <= 0) return
-        graphics.fill(x + 3, y + 3, x + width + 3, y + height + 3, SHADOW)
-        graphics.fill(x, y, x + width, y + height, if (dark) PANEL_DARK else PANEL)
-        graphics.fill(x, y, x + 3, y + height, GOLD)
-        graphics.fill(x + 3, y, x + width, y + 1, 0x99FFFFFF.toInt())
-        graphics.fill(x + 3, y + height - 1, x + width, y + height, 0x88555555.toInt())
+        val border = style.spacing.border
+        val opacity = alpha * style.opacity.panel
+        graphics.fill(x + 3, y + 3, x + width + 3, y + height + 3, multiplyAlpha(style.colors.panelShadow, opacity))
+        graphics.fill(x, y, x + width, y + height, multiplyAlpha(if (dark) style.colors.panelDark else style.colors.panel, opacity))
+        graphics.fill(x, y, x + border, y + height, multiplyAlpha(style.colors.accent, opacity))
+        graphics.fill(x + border, y, x + width, y + 1, multiplyAlpha(style.colors.panelHighlight, opacity))
+        graphics.fill(x + border, y + height - 1, x + width, y + height, multiplyAlpha(style.colors.text, 0.55f * opacity))
     }
 
     @JvmStatic
+    @JvmOverloads
     fun renderButton(
         graphics: GuiGraphics,
         x: Int,
@@ -75,35 +105,58 @@ object SaoUiStyle {
         height: Int,
         message: Component,
         hovered: Boolean,
+        focused: Boolean,
+        pressed: Boolean,
         active: Boolean,
+        selected: Boolean = false,
         alpha: Float = 1f,
         icon: SaoIcon? = null,
         compact: Boolean = false,
     ) {
+        if (width <= 0 || height <= 0) return
+        val colors = style.colors
+        val effectiveAlpha = alpha.coerceIn(0f, 1f) * if (active) 1f else style.opacity.disabled
         val base = when {
-            !active -> DISABLED
-            hovered -> GOLD
-            else -> PANEL
+            !active -> colors.buttonDisabled
+            pressed -> colors.buttonPressed
+            selected -> colors.selected
+            hovered -> colors.buttonHover
+            focused -> colors.buttonFocused
+            else -> colors.button
         }
-        val color = withAlpha(base, alpha)
-        graphics.fill(x + 2, y + 2, x + width + 2, y + height + 2, withAlpha(SHADOW, alpha))
-        graphics.fill(x, y, x + width, y + height, color)
-        graphics.fill(x, y, x + 2, y + height, withAlpha(if (hovered) GOLD_LIGHT else GOLD, alpha))
-        graphics.fill(x + 2, y, x + width, y + 1, withAlpha(0xCCFFFFFF.toInt(), alpha))
-        graphics.fill(x + 2, y + height - 1, x + width, y + height, withAlpha(0x88555555.toInt(), alpha))
+        val accent = if (focused || hovered || selected) colors.accentLight else colors.accent
+        val border = style.spacing.border.coerceAtMost(width)
+        graphics.fill(x + 2, y + 2, x + width + 2, y + height + 2, multiplyAlpha(colors.panelShadow, effectiveAlpha))
+        graphics.fill(x, y, x + width, y + height, multiplyAlpha(base, effectiveAlpha))
+        graphics.fill(x, y, x + border, y + height, multiplyAlpha(accent, effectiveAlpha))
+        graphics.fill(x + border, y, x + width, y + 1, multiplyAlpha(colors.panelHighlight, effectiveAlpha))
+        graphics.fill(x + border, y + height - 1, x + width, y + height, multiplyAlpha(colors.text, 0.55f * effectiveAlpha))
 
         icon?.let {
-            val size = minOf(16, height - 4)
-            renderIcon(graphics, it, x + (if (compact) (width - size) / 2 else 5), y + (height - size) / 2, size)
+            val size = minOf(16, height - 4).coerceAtLeast(1)
+            renderIcon(
+                graphics,
+                it,
+                x + if (compact) (width - size) / 2 else 5,
+                y + (height - size) / 2,
+                size,
+                if (active) colors.icon else colors.iconDisabled,
+                effectiveAlpha * style.opacity.icon,
+            )
         }
 
         if (!compact) {
             val font = Minecraft.getInstance().font
-            val textColor = withAlpha(if (active && hovered) LIGHT_TEXT else if (active) TEXT else LIGHT_TEXT, alpha)
-            val textX = if (icon == null) x + width / 2 else x + 26
-            val centered = icon == null
-            val drawX = if (centered) textX - font.width(message) / 2 else textX
-            graphics.drawString(font, message, drawX, y + (height - 8) / 2, textColor, true)
+            val startX = if (icon == null) x + 5 else x + 26
+            val available = (x + width - 5 - startX).coerceAtLeast(1)
+            val fitted = fitText(message, available)
+            val textColor = when {
+                !active -> colors.textDisabled
+                hovered || focused || pressed || selected -> colors.textHover
+                else -> colors.text
+            }
+            val drawX = if (icon == null) x + (width - font.width(fitted)) / 2 else startX
+            graphics.drawString(font, fitted, drawX, y + (height - 8) / 2, multiplyAlpha(textColor, effectiveAlpha), true)
         }
     }
 
@@ -116,48 +169,116 @@ object SaoUiStyle {
         height: Int,
         message: Component,
         hovered: Boolean,
+        focused: Boolean,
+        pressed: Boolean,
         active: Boolean,
         alpha: Float,
         value: Double,
     ) {
-        renderButton(graphics, x, y, width, height, message, hovered, active, alpha)
-        val trackLeft = x + 5
-        val trackRight = x + width - 5
+        renderButton(graphics, x, y, width, height, message, hovered, focused, pressed, active, alpha = alpha)
+        val trackLeft = x + 6
+        val trackRight = x + width - 6
         val trackY = y + height - 4
-        graphics.fill(trackLeft, trackY, trackRight, trackY + 2, withAlpha(0xFF555555.toInt(), alpha))
-        val knobX = trackLeft + ((trackRight - trackLeft - 4) * value.coerceIn(0.0, 1.0)).toInt()
-        graphics.fill(knobX, trackY - 2, knobX + 4, trackY + 4, withAlpha(if (hovered) GOLD_LIGHT else GOLD, alpha))
+        val effectiveAlpha = alpha * if (active) 1f else style.opacity.disabled
+        graphics.fill(trackLeft, trackY, trackRight, trackY + 2, multiplyAlpha(style.colors.sliderTrack, effectiveAlpha))
+        val knobX = trackLeft + ((trackRight - trackLeft - 5) * value.coerceIn(0.0, 1.0)).toInt()
+        graphics.fill(
+            knobX,
+            trackY - 2,
+            knobX + 5,
+            trackY + 4,
+            multiplyAlpha(if (hovered || focused) style.colors.accentLight else style.colors.accent, effectiveAlpha),
+        )
     }
 
     @JvmStatic
-    fun renderEditBoxChrome(graphics: GuiGraphics, x: Int, y: Int, width: Int, height: Int, focused: Boolean) {
-        val border = if (focused) GOLD_LIGHT else GOLD
-        graphics.fill(x - 1, y - 1, x + width + 1, y, border)
-        graphics.fill(x - 1, y + height, x + width + 1, y + height + 1, border)
-        graphics.fill(x - 1, y, x, y + height, border)
-        graphics.fill(x + width, y, x + width + 1, y + height, border)
+    fun renderEditBoxChrome(
+        graphics: GuiGraphics,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        hovered: Boolean,
+        focused: Boolean,
+        active: Boolean,
+    ) {
+        val border = when {
+            !active -> style.colors.buttonDisabled
+            focused -> style.colors.accentLight
+            hovered -> style.colors.accent
+            else -> style.colors.mutedText
+        }
+        val thickness = style.spacing.border
+        graphics.fill(x - thickness, y - thickness, x + width + thickness, y, border)
+        graphics.fill(x - thickness, y + height, x + width + thickness, y + height + thickness, border)
+        graphics.fill(x - thickness, y, x, y + height, border)
+        graphics.fill(x + width, y, x + width + thickness, y + height, border)
+    }
+
+    @JvmStatic
+    fun renderEditBoxBackground(graphics: GuiGraphics, x: Int, y: Int, width: Int, height: Int, active: Boolean) {
+        val color = if (active) style.colors.editBoxBackground else style.colors.buttonDisabled
+        graphics.fill(x, y, x + width, y + height, multiplyAlpha(color, if (active) 1f else style.opacity.disabled))
     }
 
     @JvmStatic
     fun renderContainerChrome(graphics: GuiGraphics, left: Int, top: Int, width: Int, height: Int) {
-        graphics.fill(left - 3, top - 3, left + width + 3, top - 2, GOLD)
-        graphics.fill(left - 3, top + height + 2, left + width + 3, top + height + 3, GOLD)
-        graphics.fill(left - 3, top - 2, left - 2, top + height + 2, GOLD)
-        graphics.fill(left + width + 2, top - 2, left + width + 3, top + height + 2, GOLD)
+        renderPanel(graphics, left - 4, top - 4, width + 8, height + 8, dark = true)
     }
 
-    fun renderIcon(graphics: GuiGraphics, icon: SaoIcon, x: Int, y: Int, size: Int = 16) {
+    @JvmStatic
+    @JvmOverloads
+    fun renderIcon(
+        graphics: GuiGraphics,
+        icon: SaoIcon,
+        x: Int,
+        y: Int,
+        size: Int = 16,
+        color: Int = style.colors.icon,
+        alpha: Float = 1f,
+    ) {
+        setColor(graphics, color, alpha)
         graphics.blit(icon.texture, x, y, size, size, 0f, 0f, 64, 64, 64, 64)
+        resetColor(graphics)
     }
 
-    fun renderSlot(graphics: GuiGraphics, x: Int, y: Int, size: Int = 18) {
-        graphics.blit(SLOT, x, y, size, size, 0f, 0f, 256, 256, 256, 256)
+    @JvmStatic
+    @JvmOverloads
+    fun renderSlot(graphics: GuiGraphics, x: Int, y: Int, size: Int = 18, equipment: Boolean = false) {
+        val inset = style.spacing.slotInset
+        if (equipment) {
+            graphics.fill(x + inset, y + inset, x + size - inset, y + size - inset, style.colors.slotEquipment)
+        }
+        graphics.blit(style.textures.slot, x, y, size, size, 0f, 0f, 256, 256, 256, 256)
     }
 
-    private fun withAlpha(color: Int, alpha: Float): Int {
+    @JvmStatic
+    fun fitText(message: Component, maxWidth: Int): Component {
+        val font = Minecraft.getInstance().font
+        if (maxWidth <= 0 || font.width(message) <= maxWidth) return message
+        val ellipsis = "…"
+        val body = font.plainSubstrByWidth(message.string, (maxWidth - font.width(ellipsis)).coerceAtLeast(0))
+        return Component.literal(body + ellipsis).withStyle(message.style)
+    }
+
+    @JvmStatic
+    fun multiplyAlpha(color: Int, alpha: Float): Int {
         val original = color ushr 24 and 0xFF
         val result = (original * alpha.coerceIn(0f, 1f)).toInt()
         return color and 0x00FFFFFF or (result shl 24)
+    }
+
+    private fun setColor(graphics: GuiGraphics, color: Int, alpha: Float) {
+        graphics.setColor(
+            (color ushr 16 and 0xFF) / 255f,
+            (color ushr 8 and 0xFF) / 255f,
+            (color and 0xFF) / 255f,
+            (color ushr 24 and 0xFF) / 255f * alpha.coerceIn(0f, 1f),
+        )
+    }
+
+    private fun resetColor(graphics: GuiGraphics) {
+        graphics.setColor(1f, 1f, 1f, 1f)
     }
 }
 

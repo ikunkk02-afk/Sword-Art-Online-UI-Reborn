@@ -19,6 +19,8 @@ class ThemeJsonParser(
 
     fun parseDocument(content: String): Result<ThemeDocument> = decode(content)
 
+    fun parseScreens(content: String): Result<ScreenThemeDefinition> = decode(content)
+
     private inline fun <reified T> decode(content: String): Result<T> = try {
         Result.success(json.decodeFromString<T>(content))
     } catch (cause: Exception) {

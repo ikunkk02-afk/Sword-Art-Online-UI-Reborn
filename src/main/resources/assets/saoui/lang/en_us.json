@@ -352,6 +352,7 @@
   "mcui.screen.logout.title": "Log out",
   "mcui.screen.logout.body": "Return to the title screen?",
   "mcui.screen.death.leave": "Leave this world?",
-  "mcui.screen.notice.static": "All bundled SAO UI is rendered without animation.",
-  "mcui.screen.notice.integrations": "Guild, party, map and accessory integrations are unavailable."
+  "mcui.screen.notice.framework": "Screen visuals are supplied by the active MCUI resource theme.",
+  "mcui.screen.notice.integrations": "Guild, party, map and accessory integrations are unavailable.",
+  "mcui.screen.unavailable": "This integration is not available."
 }

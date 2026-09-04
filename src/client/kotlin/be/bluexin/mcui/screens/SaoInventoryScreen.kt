@@ -11,18 +11,19 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen
 import net.minecraft.network.chat.Component
 
 /**
- * Modern interactive inventory: Minecraft keeps slot/click/recipe-book ownership,
- * while the unfinished legacy InventoryGui is represented by the original SAO assets.
+ * SAO chrome over the vanilla InventoryScreen. InventoryMenu, slots, recipe book,
+ * tooltips, quick-craft and all input handling remain owned by Minecraft.
  */
 class SaoInventoryScreen : InventoryScreen(
     requireNotNull(Minecraft.getInstance().player) { "SAO inventory requires a local player" },
-) {
+), SaoScreenSurface {
     override fun renderBg(graphics: GuiGraphics, partialTick: Float, mouseX: Int, mouseY: Int) {
-        SaoUiStyle.renderPanel(graphics, leftPos - 4, topPos - 4, imageWidth + 8, imageHeight + 8)
+        val style = SaoUiStyle.current()
+        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, style.colors.panelDark)
 
         graphics.setColor(1f, 1f, 1f, 0.12f)
         graphics.blit(
-            SaoUiStyle.PROFILE_BACKGROUND,
+            style.textures.profileBackground,
             leftPos,
             topPos,
             imageWidth,
@@ -36,21 +37,41 @@ class SaoInventoryScreen : InventoryScreen(
         )
         graphics.setColor(1f, 1f, 1f, 1f)
 
-        menu.slots.asSequence()
-            .filter { it.isActive }
-            .forEach { slot -> SaoUiStyle.renderSlot(graphics, leftPos + slot.x - 1, topPos + slot.y - 1) }
+        SaoUiStyle.renderPanel(graphics, leftPos + 5, topPos + 5, 74, 76, dark = true)
+        SaoUiStyle.renderPanel(graphics, leftPos + 84, topPos + 5, 87, 76, dark = true)
+        SaoUiStyle.renderPanel(graphics, leftPos + 5, topPos + 82, 166, 78, dark = true)
+        graphics.fill(leftPos + 7, topPos + 78, leftPos + 78, topPos + 80, style.colors.accent)
+        graphics.fill(leftPos + 86, topPos + 78, leftPos + 169, topPos + 80, style.colors.slotEquipment)
 
-        graphics.fill(leftPos + 7, topPos + 7, leftPos + 80, topPos + 79, 0x382B3038)
-        graphics.fill(leftPos + 7, topPos + 78, leftPos + 80, topPos + 79, SaoUiStyle.GOLD)
-        val client = Minecraft.getInstance()
-        val playerName = client.player?.displayName ?: client.player?.name
-        if (playerName != null) {
-            graphics.drawCenteredString(font, playerName, leftPos + 43, topPos + 10, SaoUiStyle.LIGHT_TEXT)
+        val player = Minecraft.getInstance().player
+        if (player != null) {
+            renderEntityInInventoryFollowsMouse(
+                graphics,
+                leftPos + 26,
+                topPos + 8,
+                leftPos + 75,
+                topPos + 78,
+                30,
+                0.0625f,
+                mouseX.toFloat(),
+                mouseY.toFloat(),
+                player,
+            )
         }
     }
 
     override fun renderLabels(graphics: GuiGraphics, mouseX: Int, mouseY: Int) {
-        graphics.drawString(font, Component.translatable("sao.element.profile"), titleLabelX, titleLabelY, SaoUiStyle.TEXT, false)
-        graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, SaoUiStyle.MUTED_TEXT, false)
+        val profile = SaoUiStyle.fitText(Component.translatable("sao.element.profile"), 66)
+        val equipment = SaoUiStyle.fitText(Component.translatable("sao.element.equipment"), 78)
+        val inventory = SaoUiStyle.fitText(playerInventoryTitle, 154)
+        graphics.drawCenteredString(font, profile, 42, 9, SaoUiStyle.LIGHT_TEXT)
+        graphics.drawString(font, equipment, 89, 9, SaoUiStyle.TITLE, false)
+        graphics.drawString(font, inventory, 9, 72, SaoUiStyle.LIGHT_TEXT, false)
+
+        val playerName = Minecraft.getInstance().player?.displayName ?: Minecraft.getInstance().player?.name
+        if (playerName != null) {
+            val fitted = SaoUiStyle.fitText(playerName, 66)
+            graphics.drawCenteredString(font, fitted, 42, 68, SaoUiStyle.MUTED_TEXT)
+        }
     }
 }

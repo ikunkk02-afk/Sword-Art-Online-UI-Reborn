@@ -5,66 +5,51 @@
 
 package be.bluexin.mcui.screens
 
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.components.Tooltip
 import net.minecraft.client.gui.screens.ChatScreen
+import net.minecraft.client.gui.screens.GenericMessageScreen
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.achievement.StatsScreen
 import net.minecraft.client.gui.screens.advancements.AdvancementsScreen
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
 import net.minecraft.client.gui.screens.options.AccessibilityOptionsScreen
 import net.minecraft.client.gui.screens.options.LanguageSelectScreen
 import net.minecraft.client.gui.screens.options.OptionsScreen
 import net.minecraft.client.gui.screens.social.SocialInteractionsScreen
 import net.minecraft.network.chat.Component
 
-/** Stable-branch five-category in-game menu, with immediate/static expansion. */
-class SaoIngameMenuScreen : Screen(Component.translatable("menu.game")) {
+/** Five-category SAO pause menu with final-position hitboxes and lightweight panel transitions. */
+class SaoIngameMenuScreen : Screen(Component.translatable("menu.game")), SaoScreenSurface {
     private var selected = Category.PROFILE
+    private val animation = SaoScreenAnimation()
+    private val categoryButtons = linkedMapOf<Category, SaoIconButton>()
+    private val actionButtons = mutableListOf<SaoIconButton>()
+    private lateinit var layout: Layout
 
     override fun init() {
-        val rootX = width / 2 - 122
-        val rootY = (height - Category.entries.size * 27) / 2
+        animation.reset()
+        categoryButtons.clear()
+        actionButtons.clear()
+        layout = createLayout()
         Category.entries.forEachIndexed { index, category ->
             val button = SaoIconButton(
-                x = rootX,
-                y = rootY + index * 27,
-                width = 24,
-                height = 24,
+                x = layout.categoryX,
+                y = layout.contentY + index * layout.categoryStep,
+                width = layout.categorySize,
+                height = layout.categorySize,
                 message = Component.translatable(category.translation),
                 icon = category.icon,
                 compact = true,
+                selected = category == selected,
             ) {
-                selected = category
-                rebuildWidgets()
+                selectCategory(category)
             }
-            addRenderableWidget(button)
+            button.tooltip = Tooltip.create(Component.translatable(category.translation))
+            categoryButtons[category] = addRenderableWidget(button)
         }
-
-        val actionX = rootX + 31
-        val actionY = rootY
-        actions(selected).forEachIndexed { index, action ->
-            val button = SaoIconButton(
-                x = actionX,
-                y = actionY + index * 24,
-                width = 190,
-                height = 21,
-                message = action.label,
-                icon = action.icon,
-                action = action.action,
-            )
-            button.active = action.enabled
-            addRenderableWidget(button)
-        }
-
-        addRenderableWidget(
-            SaoIconButton(
-                x = actionX,
-                y = actionY + 6 * 24,
-                width = 190,
-                height = 21,
-                message = Component.translatable("menu.returnToGame"),
-                icon = SaoIcon.CONFIRM,
-            ) { onClose() },
-        )
+        rebuildActions()
     }
 
     override fun onClose() {
@@ -79,11 +64,93 @@ class SaoIngameMenuScreen : Screen(Component.translatable("menu.game")) {
 
     override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
         renderBackground(graphics, mouseX, mouseY, partialTick)
-        val rootX = width / 2 - 122
-        val rootY = (height - Category.entries.size * 27) / 2
-        SaoUiStyle.renderPanel(graphics, rootX - 7, rootY - 24, 234, 190)
-        graphics.drawString(font, Component.translatable(selected.translation), rootX + 31, rootY - 16, SaoUiStyle.TEXT, true)
+        val style = SaoUiStyle.current()
+        val panelProgress = animation.panelProgress(style.animation.categoryMillis)
+        val slide = ((1f - panelProgress) * style.animation.panelSlidePixels).toInt()
+        SaoUiStyle.renderPanel(
+            graphics,
+            layout.panelX + slide,
+            layout.panelY,
+            layout.panelWidth,
+            layout.panelHeight,
+            dark = true,
+            alpha = panelProgress,
+        )
+        val title = SaoUiStyle.fitText(Component.translatable(selected.translation), layout.actionWidth)
+        graphics.drawString(font, title, layout.actionX, layout.panelY + 8, SaoUiStyle.LIGHT_TEXT, true)
+
+        categoryButtons.values.forEachIndexed { index, button ->
+            button.setAlpha(animation.screenProgress(style.animation.screenFadeMillis, index * style.animation.buttonStaggerMillis))
+        }
+        actionButtons.forEachIndexed { index, button ->
+            button.setAlpha(animation.panelProgress(style.animation.categoryMillis + index * style.animation.buttonStaggerMillis))
+        }
         super.render(graphics, mouseX, mouseY, partialTick)
+    }
+
+    private fun selectCategory(category: Category) {
+        if (category == selected) return
+        selected = category
+        categoryButtons.forEach { (value, button) -> button.selected = value == category }
+        animation.restartPanel()
+        rebuildActions()
+    }
+
+    private fun rebuildActions() {
+        actionButtons.forEach(::removeWidget)
+        actionButtons.clear()
+        actions(selected).forEachIndexed { index, action ->
+            val button = SaoIconButton(
+                x = layout.actionX,
+                y = layout.contentY + index * layout.actionStep,
+                width = layout.actionWidth,
+                height = layout.actionHeight,
+                message = action.label,
+                icon = action.icon,
+                action = action.action,
+            )
+            button.active = action.enabled
+            if (!action.enabled) button.tooltip = Tooltip.create(Component.translatable("mcui.screen.unavailable"))
+            actionButtons += addRenderableWidget(button)
+        }
+        actionButtons += addRenderableWidget(
+            SaoIconButton(
+                x = layout.actionX,
+                y = layout.contentY + 6 * layout.actionStep,
+                width = layout.actionWidth,
+                height = layout.actionHeight,
+                message = Component.translatable("menu.returnToGame"),
+                icon = SaoIcon.CONFIRM,
+            ) { onClose() },
+        )
+    }
+
+    private fun createLayout(): Layout {
+        val style = SaoUiStyle.current()
+        val margin = style.spacing.margin.coerceAtMost((width / 5).coerceAtLeast(1))
+        val panelWidth = minOf(286, (width - margin * 2).coerceAtLeast(90))
+        val panelHeight = minOf(190, (height - margin * 2).coerceAtLeast(120))
+        val panelX = (width - panelWidth) / 2
+        val panelY = (height - panelHeight) / 2
+        val padding = style.spacing.padding
+        val categorySize = 24
+        val categoryStep = ((panelHeight - padding * 2) / Category.entries.size).coerceIn(24, 29)
+        val contentY = panelY + padding + 20
+        val actionX = panelX + padding + categorySize + style.spacing.buttonGap + 3
+        return Layout(
+            panelX = panelX,
+            panelY = panelY,
+            panelWidth = panelWidth,
+            panelHeight = panelHeight,
+            categoryX = panelX + padding,
+            categorySize = categorySize,
+            categoryStep = categoryStep,
+            contentY = contentY,
+            actionX = actionX,
+            actionWidth = (panelX + panelWidth - padding - actionX).coerceAtLeast(42),
+            actionHeight = 20,
+            actionStep = 23,
+        )
     }
 
     private fun actions(category: Category): List<MenuAction> {
@@ -148,7 +215,12 @@ class SaoIngameMenuScreen : Screen(Component.translatable("menu.game")) {
                             title = Component.translatable("mcui.screen.logout.title"),
                             body = Component.translatable("mcui.screen.logout.body"),
                         ) {
-                            client.disconnect(SaoTitleScreen())
+                            client.reportingContext.draftReportHandled(
+                                client,
+                                this,
+                                Runnable { disconnectFromWorld(client) },
+                                true,
+                            )
                         },
                     )
                 },
@@ -156,11 +228,42 @@ class SaoIngameMenuScreen : Screen(Component.translatable("menu.game")) {
         }
     }
 
+    private fun disconnectFromWorld(client: Minecraft) {
+        val localServer = client.isLocalServer
+        val server = client.currentServer
+        client.level?.disconnect()
+        if (localServer) client.disconnect(GenericMessageScreen(Component.translatable("menu.savingLevel")))
+        else client.disconnect()
+
+        val title = SaoTitleScreen()
+        client.setScreen(
+            when {
+                localServer || server?.isRealm == true -> title
+                else -> JoinMultiplayerScreen(title)
+            },
+        )
+    }
+
     private data class MenuAction(
         val label: Component,
         val icon: SaoIcon,
         val enabled: Boolean = true,
         val action: () -> Unit,
+    )
+
+    private data class Layout(
+        val panelX: Int,
+        val panelY: Int,
+        val panelWidth: Int,
+        val panelHeight: Int,
+        val categoryX: Int,
+        val categorySize: Int,
+        val categoryStep: Int,
+        val contentY: Int,
+        val actionX: Int,
+        val actionWidth: Int,
+        val actionHeight: Int,
+        val actionStep: Int,
     )
 
     private enum class Category(val icon: SaoIcon, val translation: String) {

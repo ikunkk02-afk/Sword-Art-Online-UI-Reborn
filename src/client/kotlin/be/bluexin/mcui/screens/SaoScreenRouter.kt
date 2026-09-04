@@ -17,6 +17,7 @@ object SaoScreenRouter {
     @JvmStatic
     fun route(screen: Screen?): Screen? = when {
         screen == null -> null
+        screen is SaoScreenSurface -> screen
         screen.javaClass == TitleScreen::class.java -> SaoTitleScreen()
         screen.javaClass == PauseScreen::class.java && (screen as PauseScreen).showsPauseMenu() -> SaoIngameMenuScreen()
         screen.javaClass == InventoryScreen::class.java -> SaoInventoryScreen()

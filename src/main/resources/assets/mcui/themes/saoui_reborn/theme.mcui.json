@@ -8,6 +8,6 @@
     "Tencao",
     "Sword Art Online UI: Reborn contributors"
   ],
-  "description": "Modern resolved HUD migrated from the bundled SAO theme and original repository assets.",
+  "description": "Modern resolved HUD and screen style migrated from the bundled SAO theme and original repository assets.",
   "namespace": "saoui"
 }
