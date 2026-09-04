@@ -15,6 +15,7 @@ import be.bluexin.mcui.fabric.client.hud.HudEffectSnapshot
 import be.bluexin.mcui.render.element.DynamicTextElement
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.render.element.EffectListElement
+import be.bluexin.mcui.render.element.EntityHealthListElement
 import be.bluexin.mcui.render.element.ElementVisitor
 import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
@@ -221,6 +222,32 @@ class RenderingElementVisitor(
                     )
                 }
             }
+    }
+
+    override fun visit(element: EntityHealthListElement, context: RenderContext) = withElement(element, context) {
+        val data = hudData ?: return@withElement
+        data.nearbyEntities.asSequence().take(element.maxEntities).forEachIndexed { index, entity ->
+            val y = index * element.rowHeight
+            drawTextureRegion(element.background, 0, y, element.width, element.rowHeight)
+            val value = (entity.health / entity.maxHealth).coerceIn(0f, 1f)
+            val filled = (element.width * value).roundToInt().coerceIn(0, element.width)
+            if (filled > 0) {
+                operations.enableScissor(ClipRect(0, y, filled, element.rowHeight))
+                try {
+                    drawTextureRegion(element.foreground, 0, y, element.width, element.rowHeight)
+                } finally {
+                    operations.disableScissor()
+                }
+            }
+            operations.text(
+                entity.name,
+                element.width / 2,
+                y + (element.rowHeight - FONT_HEIGHT) / 2,
+                element.textColor,
+                shadow = true,
+                centered = true,
+            )
+        }
     }
 
     private fun drawHotbarSlot(element: HotbarElement, stack: ItemStack, x: Int, y: Int, selected: Boolean) {

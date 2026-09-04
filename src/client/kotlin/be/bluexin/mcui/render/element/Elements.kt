@@ -41,6 +41,7 @@ interface ElementVisitor {
     fun visit(element: HudItemElement, context: RenderContext)
     fun visit(element: HotbarElement, context: RenderContext)
     fun visit(element: EffectListElement, context: RenderContext)
+    fun visit(element: EntityHealthListElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -204,6 +205,19 @@ data class EffectListElement(
     val iconSize: Int = 18,
     val iconSet: HudEffectIconSet = HudEffectIconSet.VANILLA,
     val includePlayerStates: Boolean = false,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+data class EntityHealthListElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val width: Int,
+    val rowHeight: Int,
+    val maxEntities: Int,
+    val background: TextureRegion,
+    val foreground: TextureRegion,
+    val textColor: ArgbColor,
 ) : Element {
     override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
 }

@@ -52,6 +52,21 @@ class HudDataProvider {
         val attackStrength = player.getAttackStrengthScale(0f).coerceIn(0f, 1f)
         val foodData = player.foodData
         val maxAir = player.maxAirSupply.coerceAtLeast(1)
+        val nearbyEntities = minecraft.level!!.getEntitiesOfClass(
+            LivingEntity::class.java,
+            player.boundingBox.inflate(ENTITY_HUD_RANGE),
+        ) { entity -> entity !== player && entity.isAlive && !entity.isInvisibleTo(player) }
+            .asSequence()
+            .sortedBy { entity -> player.distanceToSqr(entity) }
+            .take(MAX_ENTITY_HUD_ENTRIES)
+            .map { entity ->
+                HudEntitySnapshot(
+                    name = entity.displayName?.string ?: entity.name.string,
+                    health = entity.health,
+                    maxHealth = entity.maxHealth.coerceAtLeast(1f),
+                )
+            }
+            .toList()
 
         return HudDataSnapshot(
             playerName = player.displayName?.string ?: player.name.string,
@@ -85,6 +100,7 @@ class HudDataProvider {
                 attackStrength = attackStrength,
                 attackReady = attackStrength >= 1f,
             ),
+            nearbyEntities = nearbyEntities,
             creative = player.isCreative,
             spectator = player.isSpectator,
             survivalHud = gameMode.canHurtPlayer(),
@@ -103,5 +119,7 @@ class HudDataProvider {
         const val HOTBAR_SIZE = 9
         const val DEFAULT_MAX_FOOD = 20
         const val DEFAULT_MAX_SATURATION = 20f
+        const val ENTITY_HUD_RANGE = 32.0
+        const val MAX_ENTITY_HUD_ENTRIES = 8
     }
 }

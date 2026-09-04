@@ -414,7 +414,7 @@ The bundled `saoui:sao` theme on `origin/1.16.5` is the authoritative visual bas
 - No independent `ARMOR` or `MOUNT_HEALTH` visual exists in the official SAO theme. The stable theme intentionally replaced those calls with empty parts, so the modern formal theme now suppresses both instead of inventing art or retaining phase-four bars.
 - The old jump fragment used the then-current vanilla jump atlas. Its modern equivalent uses the 1.21.1 `jump_bar_background` and `jump_bar_progress` sprites through `TexturedProgressBarElement`.
 - The old effects fragment calls one static 16x16 SAO status icon per resolved status. All 27 repository-owned `textures/sao/status_icons` assets were restored, and the modern effect list reproduces the original horizontal 11-pixel spacing without executing `RawElement` or expressions.
-- `entities.png` is referenced only by the deferred expression-driven entity-health HUD and is not copied in this phase.
+- `entities.png` supplies the stable theme's nearby-entity frame and health strip. The complete static-UI follow-up restores the original 512x512 asset and converts the expression-driven repetition into a typed entity snapshot/list element.
 - The historical HUD uses Minecraft's font renderer. Although old texture trees contain files named `ascii.png`, no bundled SAO HUD font-provider JSON or reusable font configuration was found. The modern theme uses the Minecraft default font; no font file of uncertain provenance was added.
 
 The repository and restored file retain the original GPL-3.0-or-later project licensing and original `saoui` namespace/path. No Google, Pinterest, third-party resource pack, or other external art was used.
@@ -469,17 +469,48 @@ The official bundled XML theme was manually represented as modern JSON because r
 | [x] | Mount | Stable SAO behavior restored: no invented mount-health art, and the phase-four/Vanilla mount bar is suppressed. |
 | [x] | Jump | Historical vanilla-style jump bar mapped to the equivalent 1.21.1 background/progress sprites. |
 | [x] | Effects | All 27 original SAO status icons restored with the stable horizontal, icon-only layout and snapshot-driven state mapping. |
-| [ ] | EntityHealth | Old expression-driven tracking and `entities.png` remain deferred. |
+| [x] | EntityHealth | Original `entities.png` frame/strip with an eight-entry, nearest-first immutable snapshot list. |
 
-Vanilla suppression logic and the existing single client-only Mixin are unchanged. The formal theme now supplies `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `FOOD`, `AIR`, `CROSS_HAIR`, `ARMOR`, `MOUNT_HEALTH`, `JUMP_BAR`, and `EFFECTS`, so no visible vanilla/phase-four substitute remains for those parts. No Mixin was added. `PARTY`, `AM2BARS`, and expression-driven `ENTITY_HEALTH_HUD` remain deferred because their removed integrations are outside this HUD visual migration.
+Vanilla HUD suppression logic and its existing Mixin remain unchanged. The formal theme now supplies `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `FOOD`, `AIR`, `CROSS_HAIR`, `ARMOR`, `MOUNT_HEALTH`, `JUMP_BAR`, `EFFECTS`, `PARTY`, and `ENTITY_HEALTH_HUD`, so no visible vanilla/phase-four substitute remains for the stable theme's parts. The later complete-static-UI follow-up adds only client screen/widget Mixins; it does not alter HUD suppression. `PARTY` has no fabricated runtime data without the removed integration, and `AM2BARS` is not part of the stable SAO theme.
 
 No item-pop, health interpolation, selection, fade, particle, or other animation system was restored. Static state changes are immediate.
+
+### Complete static UI migration follow-up
+
+The user explicitly authorized completing screens that were empty, commented out, or disabled on the stable branch. `origin/1.16.5` remains the visual baseline. Its `MainMenu` class was empty, `InventoryGui` was commented out, and the death-screen replacement hook was disabled, so their modern layouts are new implementations using only assets already present in that branch.
+
+Restored at their original `assets/saoui` paths:
+
+- all 27 64x64 menu icons;
+- `textures/menu/parts/alertbg.png` and `profilebg.png`;
+- `textures/hud/buttons/death.png`, `textures/logo.png`, and `textures/slot.png`;
+- `textures/sao/entities.png`;
+- the bundled English strings, six original UI sound files, and `sounds.json`.
+
+No particle sheet or animated metadata was restored. No external image, font, resource pack, or newly drawn replacement texture was added.
+
+The modern static screen layer consists of:
+
+- `SaoTitleScreen`: singleplayer, multiplayer, options, language, accessibility, and quit, with the original logo and menu icons;
+- `SaoIngameMenuScreen`: the stable five-category profile/social/message/navigation/settings hierarchy, expanded immediately with no dropdown animation;
+- `SaoInventoryScreen`: original profile/slot artwork around Minecraft's own `InventoryMenu`, slot clicks, item stacks, recipe book, and server synchronization;
+- `SaoDeathScreen`: original death artwork, cause, score, respawn, hardcore handling, and title-screen exit without fade or particles;
+- `SaoConfirmationScreen` and `SaoNoticeScreen`: reusable static popup panels using the original alert and confirm/cancel/help assets.
+
+The removed SAOMCLib integrations are represented honestly: guild, party, friend-integration, accessory, field-map, and dungeon-map entries retain their official icons and disabled state. The vanilla 1.21.1 social-player list, chat, advancements, statistics, options, language, and accessibility screens are connected where they provide an equivalent maintained function.
+
+All remaining vanilla and mod screens using standard Minecraft widgets receive the shared SAO background, button, slider, edit-box accent, and container-frame skin. Exact vanilla `TitleScreen`, `PauseScreen`, `InventoryScreen`, and `DeathScreen` instances are routed to their SAO replacements; subclasses supplied by other mods are left intact and inherit the global skin instead.
+
+`EntityHealthListElement` is compiled during resource reload like every other resolved HUD element. `HudDataProvider` copies up to eight nearest visible living entities within 32 blocks into name/health/max-health snapshots. The renderer uses the original `entities.png` background/foreground regions and never retains an entity object. `PARTY` remains data-inactive when the removed server integration is absent rather than displaying fabricated members. `AM2BARS` is not part of the stable bundled SAO theme.
+
+The UI layer has no animator, interpolation, fade, particle, cursor-following model, or per-frame legacy conversion. Screen positions use GUI logical coordinates and responsive center/safe offsets.
 
 ### Phase-five compile record
 
 - `\.\gradlew.bat compileKotlin compileClientKotlin --no-daemon --no-parallel` passed after one necessary retry. The first pass found only Mojang's nullable `LocalPlayer.displayName`; capture now falls back to `player.name` when absent.
 - The successful output contains the new main-source legacy adapter classes and client `TexturedProgressBarElement` class.
 - The stable-theme completion follow-up ran the same compile check exactly once and passed. No client, world, game test, or animation validation was started.
+- The complete-static-UI follow-up ran one compile-check sequence covering `compileKotlin`, `compileClientKotlin`, and `compileClientJava`. After correcting the compiler-reported nullable `Screen.minecraft` accesses and the mapped `PauseScreen.showsPauseMenu()` call form, the repeated check completed successfully. The resulting class tree contains every new screen, widget skin Mixin, router, and `EntityHealthListElement`.
 - No test task, client launch, world entry, F3+T, screenshot/OCR check, temporary resource pack, or runtime validation was performed.
 
 ### Phase-four compile record

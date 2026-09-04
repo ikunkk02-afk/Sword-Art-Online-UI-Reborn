@@ -332,6 +332,39 @@
       "showEffectIcons": true,
       "showEffectLabels": false,
       "includePlayerStates": true
+    },
+    "PARTY": {
+      "type": "group",
+      "name": "sao_party_integration_placeholder",
+      "children": []
+    },
+    "ENTITY_HEALTH_HUD": {
+      "type": "entity_health_list",
+      "name": "sao_nearby_entity_health",
+      "transform": { "x": -100, "y": 35, "z": 5, "anchor": "TOP_RIGHT" },
+      "width": 80,
+      "entityRowHeight": 15,
+      "maxEntities": 8,
+      "foregroundColor": "#FFFFFFFF",
+      "backgroundTexture": {
+        "texture": "saoui:textures/sao/entities.png",
+        "u": 1,
+        "v": 30,
+        "sourceWidth": 255,
+        "sourceHeight": 30,
+        "textureWidth": 512,
+        "textureHeight": 512
+      },
+      "foregroundTexture": {
+        "texture": "saoui:textures/sao/entities.png",
+        "u": 1,
+        "v": 0,
+        "sourceWidth": 255,
+        "sourceHeight": 30,
+        "textureWidth": 512,
+        "textureHeight": 512,
+        "tint": "#FFF40000"
+      }
     }
   }
 }

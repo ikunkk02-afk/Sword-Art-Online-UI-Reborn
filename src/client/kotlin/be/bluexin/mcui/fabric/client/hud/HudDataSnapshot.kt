@@ -41,6 +41,7 @@ data class HudDataSnapshot(
     val jumpProgress: Float,
     val jumpCooldown: Int,
     val crosshair: HudCrosshairSnapshot,
+    val nearbyEntities: List<HudEntitySnapshot> = emptyList(),
     val creative: Boolean,
     val spectator: Boolean,
     val survivalHud: Boolean,
@@ -52,6 +53,12 @@ data class HudDataSnapshot(
     val guiScale: Double,
     val partialTick: Float,
     val onFire: Boolean = false,
+)
+
+data class HudEntitySnapshot(
+    val name: String,
+    val health: Float,
+    val maxHealth: Float,
 )
 
 data class HudEffectSnapshot(

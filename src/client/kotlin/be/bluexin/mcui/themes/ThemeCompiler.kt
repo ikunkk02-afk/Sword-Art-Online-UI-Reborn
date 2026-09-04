@@ -15,6 +15,7 @@ import be.bluexin.mcui.render.ResolvedTransform
 import be.bluexin.mcui.render.element.DynamicTextElement
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.render.element.EffectListElement
+import be.bluexin.mcui.render.element.EntityHealthListElement
 import be.bluexin.mcui.render.element.GroupElement
 import be.bluexin.mcui.render.element.HotbarElement
 import be.bluexin.mcui.render.element.HudItemElement
@@ -255,6 +256,14 @@ class ThemeCompiler(
 
             "hotbar" -> compileHotbar(definition, element, path, state, transform, issues)
             "effects", "effect_list" -> compileEffectList(definition, element, path, state, transform, issues)
+            "entity_health_list", "nearby_entity_health" -> compileEntityHealthList(
+                definition,
+                element,
+                path,
+                state,
+                transform,
+                issues,
+            )
             else -> {
                 issues.error(definition, "$path.type", "Unknown element type '${element.type}'")
                 null
@@ -485,6 +494,59 @@ class ThemeCompiler(
             iconSize = element.effectIconSize,
             iconSet = element.effectIconSet,
             includePlayerStates = element.includePlayerStates,
+        )
+    }
+
+    private fun compileEntityHealthList(
+        definition: ThemeDefinition,
+        element: ElementDefinition,
+        path: String,
+        state: ResolvedRenderState,
+        transform: ResolvedTransform,
+        issues: MutableList<ThemeIssue>,
+    ): Element? {
+        val width = positiveDimension(definition, element.width, "$path.width", issues) ?: return null
+        if (element.entityRowHeight <= 0) {
+            issues.error(definition, "$path.entityRowHeight", "Entity row height must be greater than zero")
+            return null
+        }
+        if (element.maxEntities <= 0) {
+            issues.error(definition, "$path.maxEntities", "Entity maxEntities must be greater than zero")
+            return null
+        }
+        val backgroundDefinition = element.backgroundTexture ?: run {
+            issues.error(definition, "$path.backgroundTexture", "Entity health background texture is required")
+            return null
+        }
+        val foregroundDefinition = element.foregroundTexture ?: run {
+            issues.error(definition, "$path.foregroundTexture", "Entity health foreground texture is required")
+            return null
+        }
+        val background = compileTextureRegion(
+            definition,
+            backgroundDefinition,
+            "$path.backgroundTexture",
+            width,
+            element.entityRowHeight,
+            issues,
+        ) ?: return null
+        val foreground = compileTextureRegion(
+            definition,
+            foregroundDefinition,
+            "$path.foregroundTexture",
+            width,
+            element.entityRowHeight,
+            issues,
+        ) ?: return null
+        return EntityHealthListElement(
+            renderState = state,
+            transform = transform,
+            width = width,
+            rowHeight = element.entityRowHeight,
+            maxEntities = element.maxEntities,
+            background = background,
+            foreground = foreground,
+            textColor = ArgbColor((element.foregroundColor ?: ArgbColorDefinition.WHITE).value),
         )
     }
 

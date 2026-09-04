@@ -166,6 +166,8 @@ data class ElementDefinition(
     val showEffectIcons: Boolean = true,
     val showEffectLabels: Boolean = true,
     val includePlayerStates: Boolean = false,
+    val entityRowHeight: Int = 15,
+    val maxEntities: Int = 8,
 )
 
 data class ThemeDefinition(

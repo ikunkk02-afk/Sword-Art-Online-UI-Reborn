@@ -4,7 +4,14 @@
   "package": "be.bluexin.mcui.mixin.client",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "GuiHudSuppressionMixin"
+    "AbstractButtonSkinMixin",
+    "AbstractContainerScreenChromeMixin",
+    "AbstractSliderButtonSkinMixin",
+    "DeathScreenAccessor",
+    "EditBoxChromeMixin",
+    "GuiHudSuppressionMixin",
+    "MinecraftScreenRouterMixin",
+    "ScreenBackgroundMixin"
   ],
   "injectors": {
     "defaultRequire": 1
