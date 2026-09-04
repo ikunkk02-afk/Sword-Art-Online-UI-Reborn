@@ -1,0 +1,94 @@
+{
+  "version": "1",
+  "root": {
+    "type": "group",
+    "name": "phase_3_root",
+    "transform": {
+      "x": 16,
+      "y": 16,
+      "z": 0,
+      "scale": 1.0
+    },
+    "children": [
+      {
+        "type": "rectangle",
+        "name": "panel",
+        "width": 224,
+        "height": 70,
+        "color": "#B0202630"
+      },
+      {
+        "type": "text",
+        "name": "title",
+        "transform": {
+          "x": 12,
+          "y": 10,
+          "z": 2
+        },
+        "text": "Sword Art Online UI: Reborn",
+        "color": "#FFFFFFFF",
+        "shadow": true
+      },
+      {
+        "type": "group",
+        "name": "transformed_content",
+        "transform": {
+          "x": 12,
+          "y": 27,
+          "z": 2,
+          "scale": 0.9
+        },
+        "children": [
+          {
+            "type": "text",
+            "name": "phase_label",
+            "text": "Rendering / Theme Phase 3",
+            "color": "#FFFFC857",
+            "shadow": true
+          },
+          {
+            "type": "rectangle",
+            "name": "hierarchy_probe",
+            "transform": {
+              "x": 0,
+              "y": 17,
+              "z": 0
+            },
+            "width": 118,
+            "height": 10,
+            "color": "#A044A66C"
+          },
+          {
+            "type": "text",
+            "name": "hierarchy_text",
+            "transform": {
+              "x": 5,
+              "y": 18,
+              "z": 1,
+              "scale": 0.75
+            },
+            "text": "resource-driven group",
+            "color": "#FFFFFFFF"
+          }
+        ]
+      },
+      {
+        "type": "texture",
+        "name": "mcui_logo",
+        "transform": {
+          "x": 150,
+          "y": 9,
+          "z": 1
+        },
+        "texture": "mcui:icon.png",
+        "width": 60,
+        "height": 25,
+        "sourceWidth": 300,
+        "sourceHeight": 124,
+        "textureWidth": 300,
+        "textureHeight": 124,
+        "tint": "#E6FFFFFF"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "format": "mcui:resolved-v1",
+  "version": "phase-3",
+  "id": "mcui:development_test",
+  "name": "MCUI Phase 3 Development Test",
+  "authors": [
+    "MCUI contributors"
+  ],
+  "description": "Development-only proof that the HUD is loaded through Minecraft's resource manager."
+}

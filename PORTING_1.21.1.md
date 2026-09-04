@@ -27,7 +27,7 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | [x] | Fabric entrypoints | `fabric/.../MCUIFabricCore.kt` | `src/main/.../fabric/MCUIFabric.kt`, `src/client/.../MCUIFabricClient.kt` | Yes | Fabric Loader/API | Split main/client | No Architectury or Forge platform service layer. |
 | [x] | Resource ID helpers | `common/.../util/ResourceLocation.kt` | `src/main/.../util/ResourceIds.kt` | Yes | Minecraft | Main | Uses 1.21.1 `ResourceLocation.fromNamespaceAndPath`. Serialization adapter deferred. |
 | [~] | Config | `common/.../config/**`, Fabric config helper | `src/main/.../config/ConfigPaths.kt` | Yes | Fabric Loader | Main-safe, client mod | Stable `config/mcui` root is implemented. Typed settings/persistence await dependency and schema decisions. |
-| [~] | Resource loading/reload | Fabric `MCUIFabricCore` reload listener, `themes/loader/**` | `src/client/.../resources/ClientResourceReloads.kt` | Yes | Fabric API | Client-only | Reload registration and monotonic revision are real. Theme discovery/parse/apply remains phase two. |
+| [x] | Resource loading/reload | Fabric `MCUIFabricCore` reload listener, `themes/loader/**` | `src/client/.../resources/ClientResourceReloads.kt` | Yes | Fabric API, Kotlin Serialization JSON | Client-only | Phase three discovers, parses, validates, compiles, and atomically publishes resource-pack themes on every client resource reload. |
 | [x] | Pure Kotlin utilities (selected) | `common/.../util/LayeredMap.kt` | `src/main/.../util/LayeredMap.kt` | No | None | Main | Ported with corrected shadowing and `containsValue`; covered by unit test. |
 | [x] | Tests (foundation) | 1.19.4 `common/src/test/**` patterns | `src/test/kotlin/**` | No | Kotlin test/JUnit platform | Build only | Current test covers the migrated layered map. Legacy serde/script tests await their systems. |
 
@@ -38,7 +38,7 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | [~] | MCUI Core | `common/.../MCUICore.kt` | `1.16.5 src/main/java/com/tencao/saoui/**` | `src/main/kotlin/be/bluexin/mcui/**` | Yes | Previously Koin/KSP plus all theme modules | Main + client bootstrap | Foundation complete; full module graph waits for the loaders it initializes. |
 | [x] | Constants/logger | `common/.../Constants.kt`, `util/LoggerHelper.kt` | Same concepts in older core | `src/main/kotlin/be/bluexin/mcui/**` | Minor | SLF4J already provided | Main | Phase-one scope complete. |
 | [~] | Config/settings | `common/.../config/**`; Fabric platform helper | `1.16.5 .../config/**` | `src/main/.../config/**` | Yes | Serialization, coroutines; old Forge Config Port/NightConfig | Prefer main-safe storage, client use | Decide native Fabric-friendly persistence and migration format before porting `Setting`/`Settings`. |
-| [ ] | Theme metadata/manager | `common/.../themes/meta/**` | `1.16.5 .../themes/**`; 1.12 theme packages | `src/client/.../themes/meta/**` with pure models in main where possible | Yes | Serialization, loader stack, scripting | Mostly client | Coupled to ResourceManager, ResourceLocation changes, Koin modules, and unfinished 1.19.4 refactor. |
+| [x] | Theme metadata/manager | `common/.../themes/meta/**` | `1.16.5 .../themes/**`; 1.12 theme packages | Pure DTOs in `src/main/.../themes/**`; compiler/manager/resource adapter in `src/client/.../themes/**` | Yes | Kotlin Serialization JSON | Split main/client | Minimal metadata, discovery, JSON parsing, validation, resolved compilation, fallback, selection, and atomic snapshots are complete without Koin. |
 | [~] | Elements (new) | `common/.../themes/elements/{Fragment,Group,Hud,...}.kt` | Compare legacy implementations | `src/client/.../render/element/**` | Yes at rendering boundary | Minecraft types only; JOML supplied by Minecraft | Client for phase-two resolved models | Minimal resolved `Group`, `Rectangle`, `Text`, `Texture`, and `Item` elements are complete. Theme serialization, script-backed values, and the full element catalog remain deferred. |
 | [ ] | Legacy Elements | `common/.../themes/elements/legacy/**` | 1.16.5 and 1.12 element packages | `src/main/.../themes/elements/legacy/**` | Yes | XML, MiniScript, Lua, renderer | Split/client-heavy | KSP-generated factories and extensive old rendering calls. Do not delete absent/incomplete features. |
 | [ ] | Screen | `common/.../screens/**`, `deprecated/screens/**` | `1.16.5 .../screens/**`; 1.12 GUI packages | `src/client/.../screens/**` | Yes, substantial | Theme, elements, Lua, config | Client-only | 1.21.1 Screen/GuiGraphics/input signatures must be redesigned around compatibility adapters. |
@@ -48,14 +48,14 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | [ ] | MiniScript | `common/.../themes/miniscript/**` | 1.16.5 `themes/util/**` | `src/main/.../themes/miniscript/**` and client context adapters | Yes for game context | JEL, Serialization, Lua mapping | Split | gnu-jel Java 21 compatibility and generated bindings must be proven before inclusion. |
 | [ ] | Lua | `common/.../themes/scripting/**` | 1.16.5/1.12 scripting implementations | `src/main/.../themes/scripting/**` | Limited MC; major runtime work | LuaJ, BCEL, LuaJ-KSP/KSP, optional JNLua | Split | Security sandbox, Java 21 bytecode/runtime compatibility, and generator publishing are unresolved. |
 | [ ] | CSS | Style parsing/usage under theme loader/renderer; theme `style.css` assets | 1.16.5/1.12 theme code/assets | `src/main/.../themes/style/**` | Indirect | ph-css, ph-commons | Mostly main | Defer until the element style contract is stable. |
-| [ ] | XML / serialization | `themes/serde/**`, `themes/loader/{Xml,Json}ThemeLoader.kt` | Mature 1.16.5 `themes/util/xml/**`; 1.12 JAXB/theme models | `src/main/.../themes/serde/**` | ResourceLocation adapters need rewrite | Kotlin Serialization, xmlutil | Main with client resource adapter | Validate current Kotlin/xmlutil compatibility and preserve legacy formats/schemas. |
+| [~] | XML / serialization | `themes/serde/**`, `themes/loader/{Xml,Json}ThemeLoader.kt` | Mature 1.16.5 `themes/util/xml/**`; 1.12 JAXB/theme models | `src/main/.../themes/**` | ResourceLocation parsing moved to compiler | Kotlin Serialization JSON 1.11.0 | Main with client resource adapter | Minimal resolved JSON is complete. XML/xmlutil and legacy Gson polymorphic element JSON remain deferred. |
 | [ ] | Commands | `common/.../commands/**` | Older debug/config commands | `src/client/.../commands/**` or safe main registration | Yes | Fabric command API, theme/config | Client mod | Command source/registration context and client-vs-server semantics need review. |
-| [~] | Resource loading | `themes/loader/**`, Fabric reload listener | Older resource/theme scanners | Split loader models + client Fabric adapter | Yes | Fabric API, Serialization/XML/CSS | Client adapter | Foundation listener is ready; parsing/apply intentionally absent. |
+| [x] | Resource loading | `themes/loader/**`, Fabric reload listener | Older resource/theme scanners | Split loader models + client Fabric adapter | Yes | Fabric API, Kotlin Serialization JSON | Client adapter | Uses `ResourceManager.listResources/getResource`; no filesystem/JAR scanning. Same-location player-pack overrides follow Minecraft's selected pack stack. |
 | [ ] | Mixins | `common/.../mixin/ModConfigMixin.java`, Fabric mixin JSON | 1.16.5/1.12 mixins/ATs | `src/client/java/be/bluexin/mcui/mixin/**` only if required | Yes | Mixin | Client-only where possible | Template mixins removed. Upstream config mixin is tied to Forge Config Port and is not carried forward. |
 | [x] | Fabric platform code (foundation) | `fabric/src/main/**` | None | `src/main/.../fabric`, `src/client/.../fabric/client` | Yes | Fabric Loader/API | Fabric-only | Phase-one entrypoints/reload boundary done. Further callbacks arrive with their systems. |
 | [ ] | Forge platform code | `forge/src/main/**` | 1.16.5 is Forge | None in this phase | N/A | Forge/KotlinForForge | Excluded | Explicitly out of scope; retained only as behavioral reference. |
 | [ ] | Social/party integrations | `social/**`, deprecated party/friend elements | 1.16.5/1.12 SAOMCLib integrations | Undecided | Yes | Former FTB Library/Teams or replacement API | Client/integration | Optional integration contract must be isolated; no hard dependency in phase one. |
-| [ ] | Assets/theme packs | `common/src/main/resources/assets/{mcui,saoui}/**` | 1.16.5/1.12 full asset history | `src/main/resources/assets/{mcui,saoui}/**` | Resource metadata may need updates | None/runtime loaders | Client resources | Only the original logo is present now. Bulk assets move with validated loaders to avoid implying working themes. |
+| [~] | Assets/theme packs | `common/src/main/resources/assets/{mcui,saoui}/**` | 1.16.5/1.12 full asset history | `src/main/resources/assets/{mcui,saoui}/**` | Resource metadata may need updates | None/runtime loaders | Client resources | Original logo plus explicitly named `mcui:development_test` theme only. Historical SAO assets remain deferred until the loader contract stabilizes. |
 | [ ] | KSP generated code | Koin modules, LuaJ exposure/factories/typings | Not used in older branches the same way | `build/generated/ksp/**` if retained | No | KSP + processors | Build-time | Do not add until a ported subsystem needs it and processor/Kotlin versions are verified. |
 | [ ] | Full legacy tests | `common/src/test/**` | Ad hoc older validation | `src/test/**` | Some | Serialization, XML, Lua, Koin/MockK | Build-time | Re-enable per subsystem rather than importing a non-compiling test suite. |
 
@@ -71,13 +71,13 @@ No reference branch is checked out or modified. The 1.21.1 work lives on `fabric
 | Fabric API | `0.116.17+1.21.1` from template | Yes | Client resource reload registration and later lifecycle hooks | Verified by build/client launch | `modImplementation`. |
 | Fabric Language Kotlin | `1.13.13+kotlin.2.4.10` from template | Yes | Kotlin entrypoint/runtime | Verified by build/client launch | `modImplementation`. |
 | Kotlin test | Kotlin plugin version | Tests only | Foundation unit tests | Verified by `test` | Test scope only. |
+| Kotlin Serialization JSON | `1.11.0` | Yes | Theme metadata/HUD DTO decoding and ARGB serializer | Kotlin's 2.4.10 documentation recommends runtime 1.11.0; dependency gate and final build verified | `implementation`; only JSON is explicitly added. Compiler plugin is `org.jetbrains.kotlin.plugin.serialization` 2.4.10. |
 | SLF4J API | Supplied transitively by Minecraft/Fabric runtime | Yes, no explicit artifact | Existing MCUI logging API | Verified by compilation/runtime log | Do not duplicate or shade. |
 
 ### Deferred or removed from the active build
 
 | Legacy dependency | 1.19.4 reference version | Needed in phase one? | Current call sites | Compatibility / acquisition assessment | Decision |
 |---|---:|---|---|---|---|
-| Kotlin Serialization | `1.7.3` | No | Setting/theme JSON and serde | Version selection deferred until the data models are ported to Kotlin 2.4.x | Do not add yet. |
 | kotlinx-coroutines | `1.8.1` | No | Debounced config saves | No active call sites; Java 21 is not the first blocker | Do not add yet; reconsider with Settings. |
 | xmlutil | `0.86.2` | No | Legacy XML theme deserialization | Old build was pinned for an upstream issue; current Kotlin compatibility must be revalidated | Defer to serde phase. |
 | gnu-jel | `2.1.3` custom fork/submodule | No | MiniScript expression compiler | Not on a normal public coordinate in the old build; Java 21 behavior unproven | Defer; no submodule initialized. |
@@ -178,6 +178,104 @@ Root Group (translate 16,16)
 ### Recommended phase-three order
 
 Start with a minimal Theme loader that produces the resolved element model without pulling the renderer back into MiniScript or legacy GL state. Follow it with the full HUD system that selects and supplies those trees, then migrate legacy elements incrementally behind narrow compatibility adapters. Legacy elements should be last because they depend on both the loader contract and the HUD/render lifecycle being stable.
+
+## Phase-three theme loading foundation
+
+The runtime data flow is now:
+
+`ResourceManager -> discovery -> metadata/HUD JSON parsing -> validation -> ThemeCompiler -> immutable resolved themes -> atomic ThemeSnapshot -> existing RenderingElementVisitor`
+
+Rendering code does not import `Json`, `ResourceManager`, or theme metadata. Theme DTOs do not import `GuiGraphics`, the Minecraft client singleton, or rendering APIs. `ThemeCompiler` is the only conversion boundary from serialized values to `ResourceLocation`, `ArgbColor`, `ResolvedTransform`, `ResolvedRenderState`, and resolved elements.
+
+### Historical format investigation
+
+The three reference branches were inspected without checkout or modification.
+
+- The 1.19.4 modern detector calls `ResourceManager.listResources("themes")` and recognizes metadata only when its resource path ends in `/theme.mcui.json`.
+- A modern theme root is `assets/<namespace>/themes/<theme-name>/`. HUD candidates are exactly `hud.json` and `hud.xml` beside the metadata. `settings.json`, `fragments/`, `widgets/`, and `scripts/` are also rooted there.
+- Theme ID is generated as `<resource namespace>:<last theme-root path segment>`. It is not historically declared in metadata. A display name also falls back to that final path segment.
+- 1.19.4 metadata contains required `format` plus `version`, `fragments`, `widgets`, and `scripts`. Its checked-in `mcui:alpha` schema requires only `format`; checked-in metadata examples contain `{version, format}`.
+- The 1.19.4 detector also recognizes metadata-less `hud.xml`/`hud.json` themes. `themes/<name>/hud.*` becomes `<namespace>:<name>` (`MODERN_LEGACY_SAOUI`). An even older `assets/<namespace>/themes/hud.*` layout derived its name from the resource pack filename (`LEGACY_SAOUI`).
+- 1.12 discovers themes by manually scanning the mod JAR plus resource-pack folders/ZIPs. Its JSON HUD uses `parts` and object keys such as `ElementGroup:name`, `GLRectangle:name`, and `GLString:name`, with many string/expression wrapper values. That scanner and schema are historical references only: direct filesystem/JAR scanning is not carried forward.
+- The 1.19.4 `JsonThemeLoader` still uses Gson with generated/adapter-driven legacy classes and contains a `TODO` to move to Kotlin Serialization. The newer `Group`, `Rectangle`, and `Text` model was not wired into a complete checked-in JSON HUD schema. Therefore the path/metadata conventions are retained, while phase three defines a small explicit resolved-value HUD subset instead of claiming compatibility with the unfinished refactor or expression-heavy 1.12 JSON.
+
+### Final resource and ID conventions
+
+```text
+assets/<namespace>/themes/<theme-name>/theme.mcui.json
+assets/<namespace>/themes/<theme-name>/hud.json
+```
+
+The discovered ID is `<namespace>:<theme-name>`. Metadata may now include an optional `id`; when present it must be a legal ID and must match the resource-derived ID. Discovery is not restricted to MCUI-owned namespaces, so third-party namespaces work. Both `mcui` and historical `saoui` roots are naturally discovered and retain distinct IDs. Metadata-less legacy themes are reported with their resource, inferred ID when possible, pack, and the explicit reason that their element schema is deferred.
+
+`theme.mcui.json` supports:
+
+- Required: `format`.
+- Historical: `version`, `fragments`, `widgets`, `scripts`.
+- Phase-three descriptive/compatibility fields: `id`, `name`, `authors`, `description`, `website`, `supportedVersion`, `parent`, `extends`, and `namespace`.
+- `parent`/`extends` IDs are parsed and validated but inheritance is deliberately not executed yet.
+- `mcui:resolved-v1` is the native phase-three format. `mcui:alpha` metadata remains accepted with a warning and is compiled only if its `hud.json` already matches the resolved subset.
+- For `mcui:resolved-v1`, compiler validation additionally requires non-empty `name`, `version`, and at least one non-empty `authors` entry; the looser historical defaults remain parseable for `mcui:alpha` compatibility.
+
+### Minimal HUD JSON subset
+
+`hud.json` is `{ "version": "1", "root": <element> }`. Every element has `type`, optional `name`, `enabled` (default `true`), and `transform` with `x/y/z` (default `0`) and one uniform `scale` (default `1`). Supported types are:
+
+- `group`: recursive `children`.
+- `rectangle`: required positive `width`, `height`, and `color`.
+- `text`: required `text`; optional ARGB `color` (white), `shadow` (`false`), and `centered` (`false`).
+- `texture`: required legal `texture` ResourceLocation and positive `width`/`height`; optional `u/v`, source size, full texture size, and ARGB `tint`.
+
+ARGB accepts `#RRGGBB` (normalized to opaque), `#AARRGGBB`, `0xAARRGGBB`, or a 32-bit JSON integer. Old RGBA interpretation is not implicit. JSON `Item` is deferred because safe 1.21.1 `ItemStack` component/registry serialization would expand this phase; the phase-two resolved `ItemElement` remains available to the renderer.
+
+Unknown element types and missing/invalid structural fields invalidate the entire theme. Optional unsupported behavior becomes a warning. A syntactically valid but missing texture is checked once at compile time and warned; it is not looked up every frame.
+
+### Discovery, pack priority, and reload atomicity
+
+`ThemeResourceLoader` uses only the supplied client `ResourceManager`. `listResources("themes", ...)` discovers metadata and legacy candidates, while `getResource` resolves HUD files and textures. Minecraft 1.21.1's `FallbackResourceManager.listResources` builds the selected result for each exact ResourceLocation from the ordered pack stack and returns a path-sorted map; higher-priority definitions replace lower ones. Metadata, HUD, and textures can therefore each be overridden at their normal exact resource paths. MCUI performs no filesystem scan and does not read only its own JAR.
+
+Discovery, reads, parsing, validation, and compilation populate temporary collections. `ThemeManager.apply` publishes a completed immutable `ThemeSnapshot` through one `AtomicReference.set`. A loader-wide fatal failure rejects the apply and preserves the previous snapshot. Per-theme errors remove that theme from the new snapshot; if the configured active theme is missing or invalid, the snapshot uses a built-in empty root. There is never a partially filled live map.
+
+Development chooses `mcui:development_test`; production chooses `mcui:default`, which can be supplied or overridden by a player pack. If absent, production renders the empty fallback. No debug text is selected for ordinary production users.
+
+### Phase-three implementation status
+
+| Status | System | Result |
+|---|---|---|
+| [x] | Kotlin Serialization | Plugin `2.4.10` matches Kotlin; JSON runtime `1.11.0`; dependency-only clean-build gate passed before implementation. |
+| [x] | Pure theme data | `ThemeId`, metadata/document/element/transform DTOs, ARGB serializer, issues, and validation result are in main sources. |
+| [x] | JSON parser | Strict structured decoding with unknown-field tolerance for forward metadata compatibility; comments/trailing commas match the 1.19.4 parser tolerance. |
+| [x] | Theme compiler | Applies defaults, validates IDs/dimensions/transforms/colors/hierarchy, checks textures once, dispatches element types, and counts the stable resolved tree. |
+| [x] | Theme manager | Immutable theme map and active theme in one atomic snapshot; deterministic preferred theme and empty fallback. No Koin/global mutable graph. |
+| [x] | Resource-pack discovery | Original `themes/<name>/theme.mcui.json` convention through the Minecraft ResourceManager; all namespaces including `mcui` and `saoui`. |
+| [x] | Atomic reload | Every Fabric client resource reload performs a full temporary load and one apply; monotonic revision and summary/error logging included. |
+| [x] | Development theme | Explicit `mcui:development_test` metadata and HUD JSON; Rectangle, Text, Texture, Group, and Transform pass through the real pipeline. |
+| [x] | HUD source | `MCUIHudRenderer` reads `ThemeManager.activeTheme.hudRoot`; the phase-two hardcoded smoke tree is removed. |
+| [x] | Invalid theme behavior | Unknown type test logged resource/theme/field/path, produced loaded=0/failed=1, selected `mcui:empty`, and did not crash or leave a partial tree. |
+| [x] | Player pack override | A temporary pack overriding only the same `mcui:themes/development_test/hud.json` won over the built-in HUD and rendered changed text/color/size; test pack was removed afterward. |
+
+### Phase-three verification record
+
+- [x] Dependency gate: `clean build` succeeded immediately after adding only the serialization plugin and JSON runtime.
+- [x] Unit tests cover historical/minimal metadata, descriptive fields, missing required format, valid minimal HUD, defaults, ARGB normalization, recursive children, unknown type, missing fields, invalid ResourceLocation, missing-texture warning, Definition-to-Resolved conversion, active selection, fallback, valid snapshot replacement, and fatal-load preservation.
+- [x] Initial in-world reload: revision 1, discovered 1, loaded 1, failed 0, active `mcui:development_test`.
+- [x] In-world rendering visually verified the panel rectangle/alpha, title and phase text, existing `mcui:icon.png`, nested Group, translation, uniform scale, and Z ordering.
+- [x] F3+T after changing the built output to `Rendering / Theme Phase 3 B`: revision 2 discovered/parsed/compiled/applied the theme without restarting Minecraft.
+- [x] Unknown root type during a later F3+T: revision 3 logged the exact resource, theme, `root.type`, and unknown value; active became `mcui:empty`; renderer remained stable.
+- [x] Restored valid JSON during the same client process: revision 4 loaded successfully and restored `mcui:development_test`.
+- [x] A separate client run enabled a temporary `pack_format: 34` player pack. Minecraft listed it after the mod resources and its same-path HUD override was visible in-world.
+- [x] Both client runs quick-played the existing integrated-server world and stopped cleanly. Authentication/public-key TLS timeouts are the same unrelated development-account network issue from phases one and two.
+
+### Still deferred after phase three
+
+- XML/xmlutil, CSS/ph-css, Lua/LuaJ, MiniScript/JEL, KSP/LuaJ-KSP, and Koin.
+- Legacy 1.12 `parts` JSON, key-discriminator element encoding, expressions/cache wrappers, fragments, widgets, settings execution, scripts, and theme inheritance.
+- JSON ItemStack, complete legacy elements, full HUD part routing, vanilla HUD suppression, screen replacement, social integrations, and configuration/selection UI.
+- Complete historical SAO theme assets; only the existing logo is reused by the development theme.
+
+### Recommended phase four priority
+
+Prioritize the complete HUD system next: establish HUD part composition, lifecycle/data inputs, and selection/config boundaries on top of the now-stable resource-to-resolved pipeline. Then add legacy theme compatibility incrementally. XML serialization should follow once the shared definition/validation contract is settled. MiniScript should be last of these four because it can evaluate into the same resolved values without changing the renderer.
 
 ## Phase-one verification record
 

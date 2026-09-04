@@ -4,9 +4,11 @@ plugins {
 	id("net.fabricmc.fabric-loom-remap")
 	`maven-publish`
 	id("org.jetbrains.kotlin.jvm") version "2.4.10"
+	id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10"
 }
 
 repositories {
+	mavenCentral()
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
 	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
@@ -41,6 +43,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${providers.gradleProperty("fabric_api_version").get()}")
 	modImplementation("net.fabricmc:fabric-language-kotlin:${providers.gradleProperty("fabric_kotlin_version").get()}")
+	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${providers.gradleProperty("serialization_version").get()}")
 
 	testImplementation(kotlin("test"))
 }
