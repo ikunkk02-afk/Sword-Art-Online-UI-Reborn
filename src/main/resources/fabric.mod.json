@@ -41,6 +41,7 @@
 		"minecraft": "~1.21.1",
 		"java": ">=21",
 		"fabric-api": "*",
-		"fabric-language-kotlin": "*"
+		"fabric-language-kotlin": "*",
+		"saomclib": ">=2.0.0-alpha.1"
 	}
 }

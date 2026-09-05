@@ -8,10 +8,15 @@ package be.bluexin.mcui.screens
 import be.bluexin.mcui.themes.MCUIThemes
 import be.bluexin.mcui.themes.ResolvedScreenTheme
 import be.bluexin.mcui.util.legacyMcuiId
+import com.mojang.blaze3d.platform.GlStateManager
+import com.mojang.blaze3d.systems.RenderSystem
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
+import org.joml.Matrix4f
+import org.lwjgl.opengl.GL11
+import org.lwjgl.opengl.GL14
 
 /** Immediate-mode render helpers backed by the immutable active screen-theme snapshot. */
 object SaoUiStyle {
@@ -34,6 +39,8 @@ object SaoUiStyle {
     val ALERT_BACKGROUND: ResourceLocation get() = style.textures.dialogBackground
     val SLOT: ResourceLocation get() = style.textures.slot
     val DEATH: ResourceLocation get() = style.textures.death
+
+    private val GLINT = ResourceLocation.withDefaultNamespace("textures/misc/enchanted_glint_item.png")
 
     @JvmStatic
     fun current(): ResolvedScreenTheme = style
@@ -250,6 +257,61 @@ object SaoUiStyle {
             graphics.fill(x + inset, y + inset, x + size - inset, y + size - inset, style.colors.slotEquipment)
         }
         graphics.blit(style.textures.slot, x, y, size, size, 0f, 0f, 256, 256, 256, 256)
+    }
+
+    /** Two-pass moving glint from the historical IconElement hover renderer. */
+    @JvmStatic
+    fun renderMouseOverGlint(
+        graphics: GuiGraphics,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        alpha: Float,
+    ) {
+        if (width <= 0 || height <= 0 || alpha <= 0f) return
+        // GuiGraphics batches quads. Flush the menu before changing the blend
+        // function so the additive glint cannot brighten the white row behind it.
+        graphics.flush()
+        val previousColor = RenderSystem.getShaderColor().copyOf()
+        val previousTextureMatrix = Matrix4f(RenderSystem.getTextureMatrix())
+        val blendWasEnabled = GL11.glIsEnabled(GL11.GL_BLEND)
+        val sourceRgb = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB)
+        val destinationRgb = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB)
+        val sourceAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA)
+        val destinationAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA)
+        graphics.enableScissor(x, y, x + width, y + height)
+        try {
+            if (!blendWasEnabled) RenderSystem.enableBlend()
+            RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_COLOR, GlStateManager.DestFactor.ONE)
+            graphics.setColor(0.45f, 0.45f, 0.45f, alpha.coerceIn(0f, 1f))
+            val now = System.currentTimeMillis()
+            renderGlintPass(graphics, x, y, width, height, now, 3_000L, -50f, false)
+            renderGlintPass(graphics, x, y, width, height, now, 4_873L, 10f, true)
+        } finally {
+            RenderSystem.setTextureMatrix(previousTextureMatrix)
+            RenderSystem.blendFuncSeparate(sourceRgb, destinationRgb, sourceAlpha, destinationAlpha)
+            if (!blendWasEnabled) RenderSystem.disableBlend()
+            graphics.setColor(previousColor[0], previousColor[1], previousColor[2], previousColor[3])
+            graphics.disableScissor()
+        }
+    }
+
+    private fun renderGlintPass(
+        graphics: GuiGraphics,
+        x: Int,
+        y: Int,
+        width: Int,
+        height: Int,
+        now: Long,
+        period: Long,
+        rotation: Float,
+        reverse: Boolean,
+    ) {
+        val offset = (now % period).toFloat() / period.toFloat() / 8f * if (reverse) -1f else 1f
+        RenderSystem.setTextureMatrix(Matrix4f().scale(8f).translate(offset, 0f, 0f).rotateZ(Math.toRadians(rotation.toDouble()).toFloat()))
+        graphics.blit(GLINT, x, y, width, height, 0f, 0f, width, height, 256, 256)
+        graphics.flush()
     }
 
     @JvmStatic

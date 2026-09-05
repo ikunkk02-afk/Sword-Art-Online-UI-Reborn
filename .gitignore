@@ -3,6 +3,7 @@
 .gradle/
 .kotlin/
 build/
+build-verification/
 out/
 classes/
 

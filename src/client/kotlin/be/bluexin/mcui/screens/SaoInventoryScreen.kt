@@ -9,10 +9,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.inventory.InventoryScreen
 
 /**
- * The active 1.16.5 InventoryGui/ContainerElements implementation is commented
- * out and supplies no authoritative layout. Keep every modern container action
- * vanilla-owned until original visual evidence exists instead of inventing a
- * profile/equipment panel composition.
+ * Both historical custom inventory implementations stop at an empty shell.
+ * Keep the modern inventory's complete, native-size layout intact instead of
+ * stretching menu-label atlases over container slots or inventing a new layout.
  */
 class SaoInventoryScreen : InventoryScreen(
     requireNotNull(Minecraft.getInstance().player) { "SAO inventory requires a local player" },

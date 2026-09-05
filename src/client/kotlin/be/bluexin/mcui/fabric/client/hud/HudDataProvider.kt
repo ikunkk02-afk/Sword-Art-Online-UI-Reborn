@@ -9,6 +9,9 @@
 
 package be.bluexin.mcui.fabric.client.hud
 
+import be.bluexin.mcui.config.SaoOption
+import be.bluexin.mcui.effects.SaoEntityState
+import com.tencao.saomclib.capabilities.getPartyCapability
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
@@ -17,6 +20,8 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.NeutralMob
 import net.minecraft.world.entity.monster.Enemy
+import net.minecraft.world.entity.projectile.ProjectileUtil
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 
@@ -65,6 +70,17 @@ class HudDataProvider {
         val attackStrength = player.getAttackStrengthScale(0f).coerceIn(0f, 1f)
         val foodData = player.foodData
         val maxAir = player.maxAirSupply.coerceAtLeast(1)
+        // IngameGUI.getMouseOver used its own 64-block entity ray, independent
+        // of Minecraft's short interaction reach and block crosshair result.
+        val camera = minecraft.cameraEntity ?: player
+        val eye = camera.getEyePosition(ticks.getGameTimeDeltaPartialTick(true))
+        val ray = camera.getViewVector(1f).scale(64.0)
+        val tracked = ProjectileUtil.getEntityHitResult(
+            camera, eye, eye.add(ray), camera.boundingBox.expandTowards(ray).inflate(1.0),
+            { it is LivingEntity && !it.isSpectator && it.isPickable && it.isAlive &&
+                it !== vehicle && it !== rootVehicle }, 64.0 * 64.0,
+        )?.entity as? LivingEntity
+        val targetEntity = tracked?.let { entitySnapshot(it, player) }
         val nearbyEntities = minecraft.level!!.getEntitiesOfClass(
             LivingEntity::class.java,
             AABB(
@@ -77,6 +93,7 @@ class HudDataProvider {
             ),
         ) { entity ->
             entity !== player &&
+                entity !== tracked &&
                 entity !== vehicle &&
                 entity !== rootVehicle &&
                 entity.isAlive &&
@@ -88,9 +105,25 @@ class HudDataProvider {
             .map { entity -> entitySnapshot(entity, player) }
             .sortedBy { entity -> entity.health / entity.maxHealth }
             .toList()
-        val targetEntity = (minecraft.crosshairPickEntity as? LivingEntity)
-            ?.takeIf { it !== player && it !== vehicle && it !== rootVehicle && !it.isInvisibleTo(player) }
-            ?.let { entitySnapshot(it, player) }
+        val partyMembers = player.getPartyCapability().partyData?.getMembers().orEmpty()
+            .asSequence()
+            .filterNot { it.uuid == player.uuid }
+            .filterNot { SaoOption.HIDE_OFFLINE_PARTY() && !it.isOnline }
+            .map { member ->
+                val remotePlayer = member.player as? LivingEntity
+                val gameType = minecraft.connection?.getPlayerInfo(member.uuid)?.gameMode
+                PartyMemberSnapshot(
+                    uuid = member.uuid,
+                    displayName = member.username,
+                    health = remotePlayer?.health ?: member.health,
+                    maxHealth = (remotePlayer?.maxHealth ?: member.maxHealth).coerceAtLeast(1f),
+                    online = member.isOnline,
+                    creative = gameType == net.minecraft.world.level.GameType.CREATIVE,
+                    survivalOrAdventure = gameType == net.minecraft.world.level.GameType.SURVIVAL ||
+                        gameType == net.minecraft.world.level.GameType.ADVENTURE,
+                )
+            }
+            .toList()
 
         return HudDataSnapshot(
             playerName = player.scoreboardName,
@@ -131,12 +164,14 @@ class HudDataProvider {
             ),
             targetEntity = targetEntity,
             nearbyEntities = nearbyEntities,
+            partyMembers = partyMembers,
             creative = player.isCreative,
             spectator = player.isSpectator,
             survivalHud = gameMode.canHurtPlayer(),
             // Legacy StatusEffects.WET used PlayerEntity.isInWater, not eye-fluid state.
             underwater = player.isInWater,
             onFire = player.isOnFire,
+            mainArmRight = player.mainArm == net.minecraft.world.entity.HumanoidArm.RIGHT,
             dead = !player.isAlive,
             firstPerson = minecraft.options.cameraType.isFirstPerson,
             guiWidth = graphics.guiWidth(),
@@ -146,7 +181,7 @@ class HudDataProvider {
         )
     }
 
-    private fun entitySnapshot(entity: LivingEntity, player: LivingEntity): TargetEntitySnapshot = TargetEntitySnapshot(
+    private fun entitySnapshot(entity: LivingEntity, player: Player): TargetEntitySnapshot = TargetEntitySnapshot(
         entityId = entity.id,
         displayName = entity.displayName?.string ?: entity.name.string,
         health = entity.health,
@@ -155,14 +190,12 @@ class HudDataProvider {
         distance = player.distanceTo(entity),
         alive = entity.isAlive,
         armor = entity.armorValue,
+        colorRgb = SaoEntityState.of(entity, player).rgb,
     )
 
     /** Modern equivalent of the old RenderCapability ColorState.KILLER candidate filter. */
-    private fun isLegacyAggressiveCandidate(entity: LivingEntity, player: LivingEntity): Boolean = when {
-        entity is NeutralMob && entity.isAngry -> true
-        entity is Enemy -> (entity as? Mob)?.let { it.hasLineOfSight(player) || it.target === player } == true
-        else -> false
-    }
+    private fun isLegacyAggressiveCandidate(entity: LivingEntity, player: Player): Boolean =
+        SaoEntityState.of(entity, player) == SaoEntityState.KILLER
 
     private companion object {
         const val HOTBAR_SIZE = 9

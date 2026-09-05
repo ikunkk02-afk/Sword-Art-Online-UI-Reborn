@@ -123,6 +123,7 @@ class AnimationRegistry(
     fun legacyHealthValue(key: String, target: Float, maximum: Float, partialTick: Float, dead: Boolean): Float {
         val previous = legacyHudValues.getOrPut(key) { target }
         val next = when {
+            !be.bluexin.mcui.config.SaoOption.SMOOTH_HEALTH() -> target
             target >= maximum -> maximum
             dead || target <= 0f -> 0f
             kotlin.math.round(previous * 10f) != kotlin.math.round(target * 10f) ->
@@ -135,6 +136,10 @@ class AnimationRegistry(
 
     /** Literal legacy hunger rule: losses snap; recovery uses the health recurrence. */
     fun legacyFoodValue(key: String, target: Float, partialTick: Float): Float {
+        if (!be.bluexin.mcui.config.SaoOption.SMOOTH_HEALTH()) {
+            legacyHudValues[key] = target
+            return target
+        }
         var previous = legacyHudValues.getOrPut(key) { target }
         if (previous > target) previous = target
         val next = if (kotlin.math.round(previous * 10f) != kotlin.math.round(target * 10f)) {

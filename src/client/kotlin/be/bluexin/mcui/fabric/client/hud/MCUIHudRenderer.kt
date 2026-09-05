@@ -23,6 +23,8 @@ object MCUIHudRenderer {
     fun register() {
         if (!registered.compareAndSet(false, true)) return
         HudRenderCallback.EVENT.register(HudRenderCallback(::renderHud))
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.JOIN.register { _, _, _ -> coordinator.reset() }
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register { _, _ -> coordinator.reset() }
         Constants.LOG.info("MCUI HUD part renderer and vanilla replacement policy registered")
     }
 

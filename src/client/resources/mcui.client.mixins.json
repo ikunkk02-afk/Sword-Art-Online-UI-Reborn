@@ -8,8 +8,11 @@
     "AbstractContainerScreenChromeMixin",
     "AbstractSliderButtonSkinMixin",
     "DeathScreenAccessor",
+    "ClientAdvancementsAccessor",
     "EditBoxChromeMixin",
     "GuiHudSuppressionMixin",
+    "LivingEntityDeathEffectsMixin",
+    "LegacyFontMixin",
     "MinecraftScreenRouterMixin",
     "ScreenBackgroundMixin"
   ],

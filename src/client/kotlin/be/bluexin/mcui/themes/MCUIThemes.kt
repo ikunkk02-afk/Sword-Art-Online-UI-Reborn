@@ -14,6 +14,6 @@ object MCUIThemes {
     val DEFAULT_THEME_ID = ThemeId("mcui", "saoui_reborn")
 
     val manager = ThemeManager(
-        preferredTheme = DEFAULT_THEME_ID,
+        preferredTheme = ThemeId.parse(be.bluexin.mcui.config.SaoOptions.store.settings.theme) ?: DEFAULT_THEME_ID,
     )
 }

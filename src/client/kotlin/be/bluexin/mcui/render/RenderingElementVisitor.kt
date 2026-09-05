@@ -15,6 +15,7 @@ import be.bluexin.mcui.animation.EffectVisualSnapshot
 import be.bluexin.mcui.fabric.client.hud.HudBindingResolver
 import be.bluexin.mcui.fabric.client.hud.HudDataSnapshot
 import be.bluexin.mcui.fabric.client.hud.HudEffectSnapshot
+import be.bluexin.mcui.config.SaoOption
 import be.bluexin.mcui.render.element.DynamicTextElement
 import be.bluexin.mcui.render.element.Element
 import be.bluexin.mcui.render.element.EffectListElement
@@ -27,6 +28,7 @@ import be.bluexin.mcui.render.element.ItemElement
 import be.bluexin.mcui.render.element.LegacySaoEffectsElement
 import be.bluexin.mcui.render.element.LegacySaoEntityHealthElement
 import be.bluexin.mcui.render.element.LegacySaoHudElement
+import be.bluexin.mcui.render.element.LegacySaoPartyElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.RectangleElement
 import be.bluexin.mcui.render.element.TextElement
@@ -192,7 +194,8 @@ class RenderingElementVisitor(
         }
 
         if (element.showOffhand && !data.offHandItem.isEmpty) {
-            val offset = data.hotbarItems.size * stride + element.offhandGap
+            val originalHorizontal = element.renderState.name == "sao_original_vertical_hotbar" && element.orientation == HotbarOrientation.HORIZONTAL
+            val offset = if (originalHorizontal && !data.mainArmRight) -28 else data.hotbarItems.size * stride + element.offhandGap
             val x = if (element.orientation == HotbarOrientation.HORIZONTAL) offset else 0
             val y = if (element.orientation == HotbarOrientation.VERTICAL) offset else 0
             if (!element.selectionReplacesSlot) drawHotbarBackground(element, x, y, animatedContext)
@@ -270,7 +273,7 @@ class RenderingElementVisitor(
             )
         }
 
-        if (!data.creative && data.underwater && data.air < data.maxAir) {
+        if (be.bluexin.mcui.config.SaoOption.RENDER_AIR() && !data.creative && data.underwater && data.air < data.maxAir) {
             val airRatio = (data.air.toFloat() / data.maxAir).coerceIn(0f, 1f)
             val airWidth = (LegacySaoHudMetrics.PLAYER_BAR_MAX_WIDTH * airRatio).roundToInt()
             if (airWidth > 0) {
@@ -290,7 +293,7 @@ class RenderingElementVisitor(
             }
         }
 
-        if (!data.creative) {
+        if (be.bluexin.mcui.config.SaoOption.RENDER_FOOD() && !data.creative) {
             val smoothFood = animations.legacyFoodValue(
                 "${element.renderState.key}:food",
                 data.food.toFloat(),
@@ -317,15 +320,16 @@ class RenderingElementVisitor(
             }
         }
 
+        if (be.bluexin.mcui.config.SaoOption.REMOVE_HPXP()) return@withElement
         val healthText = if (data.playerAbsorption > 0f) {
             Component.translatable(
-                "formatHealthAbsorb",
-                ceil(smoothHealth.toDouble()),
-                ceil(data.playerMaxHealth.toDouble()),
-                ceil(data.playerAbsorption.toDouble()),
+                if (be.bluexin.mcui.config.SaoOption.ALT_ABSORB_POS()) "formatHealthAbsorbAlt" else "formatHealthAbsorb",
+                ceil(smoothHealth.toDouble()).toInt(),
+                ceil(data.playerMaxHealth.toDouble()).toInt(),
+                ceil(data.playerAbsorption.toDouble()).toInt(),
             )
         } else {
-            Component.translatable("formatHealth", ceil(smoothHealth.toDouble()), ceil(data.playerMaxHealth.toDouble()))
+            Component.translatable("formatHealth", ceil(smoothHealth.toDouble()).toInt(), ceil(data.playerMaxHealth.toDouble()).toInt())
         }
         val healthTextWidth = font.width(healthText)
         val healthPanelX = usernameWidth + LegacySaoHudMetrics.HP_PANEL_BASE_X
@@ -351,7 +355,7 @@ class RenderingElementVisitor(
             animatedContext,
         )
 
-        if (data.experienceVisible) {
+        if (be.bluexin.mcui.config.SaoOption.RENDER_EXPERIENCE() && (data.experienceVisible || be.bluexin.mcui.config.SaoOption.FORCE_HUD())) {
             val levelText = Component.translatable("displayLvShort", data.experienceLevel)
             val levelWidth = font.width(levelText)
             // EXPERIENCE was a separate absolute HUD part; compensate for this element's (2,2) root.
@@ -412,14 +416,49 @@ class RenderingElementVisitor(
         }
     }
 
+    override fun visit(element: LegacySaoPartyElement, context: RenderContext) = withElement(element, context) { animatedContext ->
+        val data = hudData ?: return@withElement
+        data.partyMembers.forEachIndexed { index, member ->
+            val y = LegacySaoHudMetrics.PARTY_Y + index * LegacySaoHudMetrics.PARTY_ROW_HEIGHT
+            drawLegacyTexture(element.texture, LegacySaoHudMetrics.PARTY_X, y, 10, 13, 86f, 15f, 10, 13, LegacySaoHudMetrics.WHITE, animatedContext)
+            drawLegacyTexture(element.texture, LegacySaoHudMetrics.PARTY_X + 10, y, 4, 13, 81f, 15f, 4, 13, LegacySaoHudMetrics.WHITE, animatedContext)
+            drawLegacyTexture(element.texture, LegacySaoHudMetrics.PARTY_X + 14, y, 43, 13, 65f, 15f, 5, 13, LegacySaoHudMetrics.WHITE, animatedContext)
+            drawLegacyTexture(element.texture, LegacySaoHudMetrics.PARTY_X + 57, y, 100, 13, 40f, 28f, 100, 13, LegacySaoHudMetrics.WHITE, animatedContext)
+            drawLegacyTexture(element.texture, LegacySaoHudMetrics.PARTY_X + 157, y, 5, 13, 70f, 15f, 5, 13, LegacySaoHudMetrics.WHITE, animatedContext)
+
+            val ratio = (member.health / member.maxHealth).coerceIn(0f, 1f)
+            val healthWidth = (LegacySaoHudMetrics.PARTY_HEALTH_MAX_WIDTH * ratio).roundToInt() +
+                LegacySaoHudMetrics.PARTY_HEALTH_MIN_WIDTH
+            val tint = healthTint(ratio, member.creative, !member.online || !member.survivalOrAdventure)
+            drawLegacyTexture(
+                element.texture,
+                LegacySaoHudMetrics.PARTY_X + LegacySaoHudMetrics.PARTY_HEALTH_X,
+                y + LegacySaoHudMetrics.PARTY_HEALTH_Y,
+                healthWidth,
+                LegacySaoHudMetrics.PARTY_HEALTH_HEIGHT,
+                LegacySaoHudMetrics.PARTY_HEALTH_U.toFloat(),
+                LegacySaoHudMetrics.PARTY_HEALTH_V.toFloat(),
+                healthWidth,
+                LegacySaoHudMetrics.PARTY_HEALTH_HEIGHT,
+                tint,
+                animatedContext,
+            )
+            operations.text(
+                member.displayName.take(LegacySaoHudMetrics.PARTY_NAME_MAX_LENGTH),
+                LegacySaoHudMetrics.PARTY_X + LegacySaoHudMetrics.PARTY_NAME_X,
+                y + LegacySaoHudMetrics.PARTY_NAME_Y,
+                renderColor(LegacySaoHudMetrics.WHITE, animatedContext),
+                shadow = SaoOption.TEXT_SHADOW(),
+                centered = false,
+            )
+        }
+    }
+
     override fun visit(element: LegacySaoEntityHealthElement, context: RenderContext) = withElement(element, context) { animatedContext ->
         val data = hudData ?: return@withElement
         val font = Minecraft.getInstance().font
-        // The active sao/hud.xml repeats nearbyEntitySize; targetEntity was populated
-        // in the old context but is not referenced by this formal theme.
-        val candidates = data.nearbyEntities.asSequence()
-            .sortedBy { it.health / it.maxHealth }
-            .take(LegacySaoHudMetrics.ENTITY_MAX_ROWS)
+        // 1.12.2: tracked entity plus the nearest five aggressive entities.
+        val candidates = be.bluexin.mcui.fabric.client.hud.LegacyEntityHudSelection.select(data.targetEntity, data.nearbyEntities)
         candidates.forEachIndexed { index, entity ->
             val y = index * LegacySaoHudMetrics.ENTITY_ROW_HEIGHT
             operations.pushTransform()
@@ -441,7 +480,7 @@ class RenderingElementVisitor(
                             LegacySaoHudMetrics.ENTITY_FILL_V.toFloat(),
                             LegacySaoHudMetrics.ENTITY_SOURCE_WIDTH,
                             LegacySaoHudMetrics.ENTITY_SOURCE_HEIGHT,
-                            LegacySaoHudMetrics.HP_LOW,
+                            ArgbColor(entity.colorRgb or (0xFF shl 24)),
                             animatedContext,
                         )
                     } finally {
@@ -850,6 +889,17 @@ class RenderingElementVisitor(
     private fun renderColor(color: ArgbColor, context: RenderContext): ArgbColor =
         (context.colorOverride ?: color).multiplyAlpha(context.alphaMultiplier)
 
+    private fun healthTint(ratio: Float, creative: Boolean = false, invalid: Boolean = false): ArgbColor = when {
+        invalid -> ArgbColor(0xFF8B8B8B.toInt())
+        creative -> LegacySaoHudMetrics.HP_CREATIVE
+        ratio <= LegacySaoHudMetrics.HEALTH_VERY_LOW_THRESHOLD -> LegacySaoHudMetrics.HP_VERY_LOW
+        ratio <= LegacySaoHudMetrics.HEALTH_LOW_THRESHOLD -> LegacySaoHudMetrics.HP_LOW
+        ratio <= LegacySaoHudMetrics.HEALTH_VERY_DAMAGED_THRESHOLD -> LegacySaoHudMetrics.HP_VERY_DAMAGED
+        ratio <= LegacySaoHudMetrics.HEALTH_DAMAGED_THRESHOLD -> LegacySaoHudMetrics.HP_DAMAGED
+        ratio <= LegacySaoHudMetrics.HEALTH_OKAY_THRESHOLD -> LegacySaoHudMetrics.HP_OKAY
+        else -> LegacySaoHudMetrics.HP_GOOD
+    }
+
     private fun effectDisplays(element: EffectListElement, data: HudDataSnapshot): List<EffectVisualSnapshot> {
         val displays = data.activeEffects.asSequence()
             .filter(HudEffectSnapshot::showIcon)
@@ -922,7 +972,7 @@ class RenderingElementVisitor(
 
     private fun legacySaoStateTexture(icon: String): ResourceLocation = ResourceLocation.fromNamespaceAndPath(
         "saoui",
-        "textures/sao/status_icons/$icon.png",
+        "textures/hud/status_icons/$icon.png",
     )
 
     private fun effectLabel(effect: HudEffectSnapshot, showDuration: Boolean): String {

@@ -8,11 +8,13 @@ This tracker covers the Fabric-only port to Minecraft 1.21.1, Java 21, Kotlin, M
 
 Reference priority is split by purpose:
 
-1. `origin/1.16.5` at `9a97a13` — authoritative source for visual geometry, hierarchy, interaction, animation, sounds, XML/CSS values, and assets.
-2. `origin/2.0-1.12-features` at `7e1a8b0` — fallback only where the 1.16.5 implementation is absent, incomplete, or ambiguous.
+1. `origin/2.0-1.12.2-ElementRework` at `892a40a2a93d8685120d79c47b79515bab9567d8` — current authority for original assets, UI, animation and behavior.
+2. `origin/1.16.5` at `9a97a13` and `origin/2.0-1.12-features` at `7e1a8b0` — historical comparisons only; they must not override the requested 1.12.2 behavior.
 3. `origin/2.0-1.19.4-port` at `fda4693` — modern architecture reference only; it is not a visual authority.
 
 No reference branch is checked out or modified. The 1.21.1 work lives on `fabric-1.21.1`.
+
+Current source evidence, completed checks and remaining gaps are tracked in [RESTORATION_1.12.2.md](RESTORATION_1.12.2.md). Later sections of this file predate that reset and do not establish full 1.12.2 parity.
 
 ## Original UI Fidelity Rebuild
 
@@ -20,7 +22,7 @@ The earlier Screen/HUD visual implementation was a functional modernization prot
 
 This rebuild resets the visual authority to `origin/1.16.5`. Original Kotlin/Java source, `themes/sao/menu.xml`, `themes/sao/hud.xml`, `themes/sao/style.css`, texture dimensions/UVs, and original OGG call sites are the only sources allowed for formal SAO UI geometry and behavior. `origin/2.0-1.12-features` is consulted only for gaps, and `origin/2.0-1.19.4-port` remains architecture guidance only.
 
-The Fabric 1.21.1 foundation, `GuiGraphics` rendering boundary, theme/resource-pack loader, resolved elements, HUD snapshots/provider/bindings, vanilla HUD suppression, animation clock, exact vanilla-screen routing, and mount compatibility fix remain in place. Visual implementations above those foundations may be replaced whenever they conflict with original evidence. The component-by-component evidence and parity status live in `ORIGINAL_UI_PARITY.md`; unsupported behavior is explicitly marked `PARTIAL`, `UNKNOWN`, or `DEFERRED / NO ORIGINAL EVIDENCE` rather than being filled with a new design.
+The Fabric 1.21.1 foundation, `GuiGraphics` rendering boundary, theme/resource-pack loader, resolved elements, HUD snapshots/provider/bindings, vanilla HUD suppression, animation clock, exact vanilla-screen routing, and mount compatibility fix remain in place. Visual implementations above those foundations may be replaced whenever they conflict with original evidence. The component-by-component evidence and parity status live in `ORIGINAL_UI_PARITY.md`. Broken historical behavior is not allowed to make core Minecraft functions unusable: the empty custom-inventory branch now falls back to the complete native vanilla inventory instead of cancelling the screen or stretching the 84×18 menu-label atlas across slots.
 
 ### Fidelity rebuild implementation
 
@@ -387,7 +389,7 @@ For a progress bar, current-value sources normalize against their matching maxim
 | `EFFECTS` | At least one active effect requests an icon. |
 | `MOUNT_HEALTH` | Current vehicle is living, alive, not spectator. |
 | `JUMP_BAR` | Current vehicle is jump-capable, alive, not spectator. |
-| `AM2BARS`, `PARTY` | Reserved/integration-only; no phase-four data provider. |
+| `AM2BARS`, `PARTY` | `AM2BARS` remains reserved. `PARTY` was integration-only in phase four and is restored by the later SAOMCLib integration phase. |
 | `ENTITY_HEALTH_HUD` | Rendering entry retained; target acquisition and visibility deferred to Phase 5+. |
 
 ### Selective vanilla replacement
@@ -497,7 +499,7 @@ The official bundled XML theme was manually represented as modern JSON because r
 | [x] | Effects | All 27 original SAO status icons restored with the stable horizontal, icon-only layout and snapshot-driven state mapping. |
 | [x] | EntityHealth | Original `entities.png` frame/strip with an eight-entry, nearest-first immutable snapshot list. |
 
-Vanilla HUD suppression logic and its existing Mixin remain unchanged. The formal theme now supplies `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `FOOD`, `AIR`, `CROSS_HAIR`, `ARMOR`, `MOUNT_HEALTH`, `JUMP_BAR`, `EFFECTS`, `PARTY`, and `ENTITY_HEALTH_HUD`, so no visible vanilla/phase-four substitute remains for the stable theme's parts. The later complete-static-UI follow-up adds only client screen/widget Mixins; it does not alter HUD suppression. `PARTY` has no fabricated runtime data without the removed integration, and `AM2BARS` is not part of the stable SAO theme.
+Vanilla HUD suppression logic and its existing Mixin remain unchanged. The formal theme now supplies `HEALTH_BOX`, `HOTBAR`, `EXPERIENCE`, `FOOD`, `AIR`, `CROSS_HAIR`, `ARMOR`, `MOUNT_HEALTH`, `JUMP_BAR`, `EFFECTS`, `PARTY`, and `ENTITY_HEALTH_HUD`, so no visible vanilla/phase-four substitute remains for the stable theme's parts. The later complete-static-UI follow-up adds only client screen/widget Mixins; it does not alter HUD suppression. `PARTY` is populated by the later mandatory SAOMCLib integration and stays empty until synchronized server party data exists; `AM2BARS` is not part of the stable SAO theme.
 
 No item-pop, health interpolation, selection, fade, particle, or other animation system was restored. Static state changes are immediate.
 
@@ -523,11 +525,11 @@ The initial static screen layer consists of:
 - `SaoDeathScreen`: original death artwork, cause, score, respawn, hardcore handling, and title-screen exit without fade or particles;
 - `SaoConfirmationScreen` and `SaoNoticeScreen`: reusable static popup panels using the original alert and confirm/cancel/help assets.
 
-The removed SAOMCLib integrations are represented honestly: guild, party, friend-integration, accessory, field-map, and dungeon-map entries retain their official icons and disabled state. The vanilla 1.21.1 social-player list, chat, advancements, statistics, options, language, and accessibility screens are connected where they provide an equivalent maintained function.
+Unavailable integrations are represented honestly: guild, friend-integration, accessory, field-map, and dungeon-map entries retain their official icons and disabled state. PARTY is restored by the later mandatory SAOMCLib integration. The vanilla 1.21.1 social-player list, chat, advancements, statistics, options, language, and accessibility screens are connected where they provide an equivalent maintained function.
 
 Exact vanilla `TitleScreen`, `PauseScreen`, `InventoryScreen`, and `DeathScreen` instances are routed to their SAO replacements. Phase seven narrows the widget/background/container skin to MCUI-owned screens and screens whose runtime class is in Mojang's own screen package; subclasses supplied by other mods are left intact and no longer inherit the global skin automatically.
 
-`EntityHealthListElement` is compiled during resource reload like every other resolved HUD element. `HudDataProvider` copies up to eight nearest visible living entities within 32 blocks into name/health/max-health snapshots. The renderer uses the original `entities.png` background/foreground regions and never retains an entity object. `PARTY` remains data-inactive when the removed server integration is absent rather than displaying fabricated members. `AM2BARS` is not part of the stable bundled SAO theme.
+`EntityHealthListElement` is compiled during resource reload like every other resolved HUD element. `HudDataProvider` copies up to eight nearest visible living entities within 32 blocks into name/health/max-health snapshots. The renderer uses the original `entities.png` background/foreground regions and never retains an entity object. The later SAOMCLib integration similarly copies synchronized party state into immutable HUD snapshots; it never retains mutable capability objects in resolved theme elements. `AM2BARS` is not part of the stable bundled SAO theme.
 
 The UI layer has no animator, interpolation, fade, particle, cursor-following model, or per-frame legacy conversion. Screen positions use GUI logical coordinates and responsive center/safe offsets.
 
@@ -618,7 +620,7 @@ Status: **Historical functional prototype; superseded by Original UI Fidelity Re
 
 - **SaoScreenRouter — Implemented, awaiting manual user validation.** Replacement still requires exact runtime equality with vanilla `TitleScreen`, pause-enabled `PauseScreen`, `InventoryScreen`, or `DeathScreen`. `SaoScreenSurface` is returned unchanged before routing, preventing replacement loops. Modded subclasses keep their original object.
 - **SaoTitleScreen — Implemented, awaiting manual user validation.** Singleplayer, multiplayer, options, language, accessibility, and quit remain present. Logical-coordinate layout responds to GUI width/height, labels ellipsize when necessary, the multiplayer permission state is honored, and Minecraft/mod versions plus Mojang copyright are retained. Realms notifications and the clickable vanilla copyright/credits target remain deferred because safely recreating private `TitleScreen` internals would overtake the visual integration scope.
-- **SaoIngameMenuScreen — Implemented, awaiting manual user validation.** PROFILE, SOCIAL, MESSAGE, NAVIGATION, and SETTINGS remain the five top-level categories. Inventory, advancements, statistics, social interactions, chat, options, language, accessibility, and disconnect remain connected. Guild, party, friends, invite, message box, field map, dungeon map, and accessory remain visibly disabled with an unavailable tooltip. Category highlight plus short panel fade/slide uses final widget coordinates for all hit testing.
+- **SaoIngameMenuScreen — Implemented, awaiting manual user validation.** PROFILE, SOCIAL, MESSAGE, NAVIGATION, and SETTINGS remain the five top-level categories. Inventory, advancements, statistics, social interactions, chat, options, language, accessibility, and disconnect remain connected. The later SAOMCLib integration enables PARTY after a server handshake; guild, friends, message box, field map, dungeon map, and accessory remain visibly disabled with an unavailable tooltip. Category highlight plus short panel fade/slide uses final widget coordinates for all hit testing.
 - **SaoInventoryScreen — Implemented, awaiting manual user validation.** It still subclasses vanilla `InventoryScreen`; `InventoryMenu`, recipe book, slot coordinates, crafting, armor/offhand, drag/double-click/shift-click/number-key/touch/quick-craft behavior, tooltips, and synchronization remain vanilla-owned. The screen adds profile/inventory/equipment panels, player name, equipment emphasis, themed slots, and exactly one call to `InventoryScreen.renderEntityInInventoryFollowsMouse`.
 - **SaoDeathScreen — Implemented, awaiting manual user validation.** Cause and score render with the historical artwork. Both normal and Hardcore paths use `LocalPlayer.respawn()`; Hardcore labels the action as Spectate. Actions remain disabled for vanilla's first 20 ticks, draft-report handling is retained before leaving, normal exit uses a confirmation, and disconnect follows Minecraft's normal saving/title flow.
 - **Dialogs — Implemented, awaiting manual user validation.** Confirmation and notice panels wrap long text, adapt button layout for narrow widths, return to the supplied parent on cancel/ESC, and preserve normal widget focus/narration. Confirmation commits at most once and disables both buttons before invoking disconnect or another external action.
@@ -653,3 +655,20 @@ Verified on 2026-09-04 with Microsoft OpenJDK 21.0.8.9:
 - Log evidence: MCUI common initialization, client initialization, and resource reload revision 1 all ran on the render thread.
 - No MCUI/Fabric Mixin crash, `ClassNotFoundException`, or `NoSuchMethodError` was observed.
 - Mojang session/profile endpoints produced TLS timeout warnings for the generated development account; these did not prevent the main menu and are unrelated to MCUI initialization.
+
+## SAOMCLib Party Integration
+
+Status: **Implemented and runtime-loaded; multiplayer interaction still requires validation against a Fabric server running the matching SAOMCLib build.**
+
+- SAOMCLib is a mandatory Fabric/Gradle dependency, resolved from the adjacent `saomclib-reborn-1.21.1` composite build during development and declared as `saomclib >=2.0.0-alpha.1` in mod metadata.
+- `HudDataProvider` reads SAOMCLib's synchronized client party capability into immutable snapshots. The production PARTY part restores the original five-slice row geometry, atlas UVs, health fill, health/creative/offline colors, eight-character display names, and `HIDE_OFFLINE_PARTY` behavior.
+- SOCIAL → PARTY is enabled only when SAOMCLib's server handshake is present. It exposes online-player invites, member/invite rows, kick or cancel-invite actions, leave, and inbound invite accept/decline using typed SAOMCLib client-to-server messages.
+- SAOMCLib's snapshot receiver now derives the original detailed party events before replacing client state. MCUI consumes invite/join/leave/kick/disband/leader-change events through the original notification wording and an invitation popup when the SAO menu is open.
+- `MOUSE_OVER_EFFECT` now controls menu hover feedback and tooltips; it no longer remains a persisted option without behavior.
+
+Verification on 2026-09-04:
+
+- SAOMCLib `build` passed independently.
+- MCUI's composite `build` passed, including main/client compilation, tests, sources jars, and remapping.
+- A development client launched with both `mcui 1.0.0-alpha.1+1.21.1` and `saomclib 2.0.0-alpha.1`; resource reload reported two discovered/two loaded themes, zero failures, and `mcui:saoui_reborn` active.
+- No MCUI/SAOMCLib Mixin error, `ClassNotFoundException`, or `NoSuchMethodError` appeared. Mojang authentication/profile requests timed out independently of mod initialization.

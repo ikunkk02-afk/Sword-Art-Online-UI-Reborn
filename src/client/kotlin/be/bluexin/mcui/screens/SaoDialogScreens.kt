@@ -46,6 +46,7 @@ open class LegacyPopupScreen(
     private val lines: List<Component>,
     private val footer: Component,
     private val buttons: List<PopupButton>,
+    private val footerSupplier: (() -> Component)? = null,
 ) : Screen(header), SaoScreenSurface {
     private var openedAt = 0L
     private var closingAt: Long? = null
@@ -91,7 +92,9 @@ open class LegacyPopupScreen(
         } else 1f
 
         graphics.pose().pushPose()
-        graphics.pose().translate(centerX, centerY, 0.0)
+        val renderCenterX = centerX.roundToInt()
+        val renderCenterY = centerY.roundToInt()
+        graphics.pose().translate(renderCenterX.toDouble(), renderCenterY.toDouble(), 0.0)
         graphics.pose().scale(earlyScale * eol, earlyScale, 1f)
         drawPopupBands(graphics, popupHeight, expansion, alpha)
         drawPopupText(graphics, popupHeight, expansion, alpha)
@@ -99,7 +102,7 @@ open class LegacyPopupScreen(
 
         // Popup.render popped its own scale before CoreGUI rendered the child IconElements.
         graphics.pose().pushPose()
-        graphics.pose().translate(centerX, centerY, 0.0)
+        graphics.pose().translate(renderCenterX.toDouble(), renderCenterY.toDouble(), 0.0)
         drawButtons(graphics, mouseX, mouseY, expansion, eol)
         graphics.pose().popPose()
     }
@@ -115,14 +118,14 @@ open class LegacyPopupScreen(
             if (localX >= x && localX < x + LegacySaoMetrics.ICON_BOUND &&
                 localY >= y && localY < y + LegacySaoMetrics.ICON_BOUND
             ) {
-                requestClose(popupButton.action)
+                if (popupButton.closeOnClick) requestClose(popupButton.action) else popupButton.action?.invoke()
                 return true
             }
         }
         return true
     }
 
-    override fun mouseMoved(mouseX: Double, mouseY: Double) {
+    override fun mouseDragged(mouseX: Double, mouseY: Double, button: Int, dragX: Double, dragY: Double): Boolean {
         if (!mouseSet) {
             previousMouseX = mouseX
             previousMouseY = mouseY
@@ -132,7 +135,7 @@ open class LegacyPopupScreen(
         centerY += mouseY - previousMouseY
         previousMouseX = mouseX
         previousMouseY = mouseY
-        super.mouseMoved(mouseX, mouseY)
+        return true
     }
 
     override fun mouseReleased(mouseX: Double, mouseY: Double, button: Int): Boolean {
@@ -266,10 +269,11 @@ open class LegacyPopupScreen(
                 (top + LegacySaoMetrics.POPUP_TITLE_HEIGHT / 2f).roundToInt(),
                 withAlpha(LegacySaoMetrics.POPUP_TEXT, alpha),
             )
-            if (footer.string.isNotEmpty()) {
+            val currentFooter = footerSupplier?.invoke() ?: footer
+            if (currentFooter.string.isNotEmpty()) {
                 val footerY = top + LegacySaoMetrics.POPUP_TITLE_HEIGHT + shadows + textHeight +
                     LegacySaoMetrics.POPUP_BUTTON_BAND_HEIGHT / 2f
-                graphics.drawCenteredString(font, footer, 0, footerY.roundToInt(), withAlpha(LegacySaoMetrics.POPUP_TEXT, alpha))
+                graphics.drawCenteredString(font, currentFooter, 0, footerY.roundToInt(), withAlpha(LegacySaoMetrics.POPUP_TEXT, alpha))
             }
         }
         if (alpha > LegacySaoMetrics.POPUP_TEXT_VISIBLE_ALPHA && lines.isNotEmpty()) {
@@ -287,14 +291,15 @@ open class LegacyPopupScreen(
         val alpha = expansion * eol
         buttons.forEachIndexed { index, button ->
             val (x, y) = buttonPosition(index, expansion)
-            val screenX = centerX + x
-            val screenY = centerY + y
+            val screenX = centerX.roundToInt() + x
+            val screenY = centerY.roundToInt() + y
             val hovered = mouseX >= screenX && mouseX < screenX + LegacySaoMetrics.ICON_BOUND &&
                 mouseY >= screenY && mouseY < screenY + LegacySaoMetrics.ICON_BOUND
             val color = if (hovered) button.hoverColor else button.color
             graphics.pose().pushPose()
             // IconElement.scale was applied about the Popup/CoreGUI origin, not the icon center.
-            graphics.pose().scale(expansion * eol, expansion, 1f)
+            val buttonScale = if (expansion < 0.2f) expansion * 4f + 0.2f else 1f
+            graphics.pose().scale(buttonScale * eol, buttonScale, 1f)
             setColor(graphics, color, alpha)
             graphics.blit(
                 LEGACY_GUI, x, y, LegacySaoMetrics.ICON_SIZE, LegacySaoMetrics.ICON_SIZE,
@@ -303,7 +308,7 @@ open class LegacyPopupScreen(
                 LegacySaoMetrics.LEGACY_ATLAS_SIZE, LegacySaoMetrics.LEGACY_ATLAS_SIZE,
             )
             resetColor(graphics)
-            SaoUiStyle.renderIcon(
+            if (button.label == null) SaoUiStyle.renderIcon(
                 graphics, button.icon,
                 x + LegacySaoMetrics.ICON_CONTENT_OFFSET,
                 y + LegacySaoMetrics.ICON_CONTENT_OFFSET,
@@ -311,6 +316,7 @@ open class LegacyPopupScreen(
                 LegacySaoMetrics.WHITE,
                 alpha,
             )
+            button.label?.let { graphics.drawCenteredString(font, it, x + 9, y + 5, LegacySaoMetrics.WHITE) }
             graphics.pose().popPose()
         }
     }
@@ -340,7 +346,7 @@ open class LegacyPopupScreen(
     private fun withAlpha(color: Int, alpha: Float) = SaoUiStyle.multiplyAlpha(color, alpha)
 
     companion object {
-        private val LEGACY_GUI = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("saoui", "textures/sao/gui.png")
+        private val LEGACY_GUI = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("saoui", "textures/guiedt.png")
 
         private fun cubicBezier(x: Float, x1: Double, y1: Double, x2: Double, y2: Double): Double {
             var low = 0.0
@@ -363,5 +369,10 @@ data class PopupButton(
     val icon: SaoIcon,
     val color: Int,
     val hoverColor: Int,
+    val label: String? = null,
+    val closeOnClick: Boolean = true,
     val action: (() -> Unit)?,
-)
+) {
+    constructor(icon: SaoIcon, color: Int, hoverColor: Int, action: (() -> Unit)?) :
+        this(icon, color, hoverColor, null, true, action)
+}

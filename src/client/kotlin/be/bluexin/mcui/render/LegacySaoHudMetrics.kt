@@ -60,6 +60,21 @@ internal object LegacySaoHudMetrics {
     const val EFFECT_X_STEP = 11
     const val EFFECT_TEXTURE_SIZE = 16
 
+    const val PARTY_X = 2
+    const val PARTY_Y = 35
+    const val PARTY_ROW_HEIGHT = 15
+    const val PARTY_FRAME_HEIGHT = 13
+    const val PARTY_NAME_X = 13
+    const val PARTY_NAME_Y = 8
+    const val PARTY_NAME_MAX_LENGTH = 8
+    const val PARTY_HEALTH_X = 58
+    const val PARTY_HEALTH_Y = 5
+    const val PARTY_HEALTH_MAX_WIDTH = 98
+    const val PARTY_HEALTH_MIN_WIDTH = 1
+    const val PARTY_HEALTH_HEIGHT = 3
+    const val PARTY_HEALTH_U = 117
+    const val PARTY_HEALTH_V = 197
+
     const val ENTITY_MAX_ROWS = 5
     const val ENTITY_ROW_HEIGHT = 15
     const val ENTITY_FILL_X = 1
@@ -75,7 +90,7 @@ internal object LegacySaoHudMetrics {
     const val ENTITY_FRAME_V = 30
     const val ENTITY_SOURCE_WIDTH = 255
     const val ENTITY_SOURCE_HEIGHT = 30
-    const val ENTITY_NAME_MAX_LENGTH = 20
+    const val ENTITY_NAME_MAX_LENGTH = 10
     const val ENTITY_NAME_RIGHT_GAP = 5
     const val ENTITY_NAME_Y = 4
 

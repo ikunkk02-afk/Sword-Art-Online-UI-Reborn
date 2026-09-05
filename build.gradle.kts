@@ -7,6 +7,9 @@ plugins {
 	id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10"
 }
 
+// An isolated verification output avoids competing with an editor's background build.
+providers.gradleProperty("verificationBuildDir").orNull?.let { layout.buildDirectory.set(file(it)) }
+
 repositories {
 	mavenCentral()
 	// Add repositories to retrieve artifacts from in here.
@@ -43,6 +46,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${providers.gradleProperty("fabric_api_version").get()}")
 	modImplementation("net.fabricmc:fabric-language-kotlin:${providers.gradleProperty("fabric_kotlin_version").get()}")
+	modImplementation("com.tencao.saomclib:saomclib:${providers.gradleProperty("saomclib_version").get()}")
 	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${providers.gradleProperty("serialization_version").get()}")
 
 	testImplementation(kotlin("test"))

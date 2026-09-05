@@ -15,5 +15,8 @@ import be.bluexin.mcui.themes.MCUIThemes
 /** Per-part replacement policy. A phase-three root alone never suppresses vanilla HUD. */
 object VanillaHudPolicy {
     @JvmStatic
-    fun suppresses(part: HudPartType): Boolean = MCUIThemes.manager.activeTheme.hud.provides(part)
+    fun suppresses(part: HudPartType): Boolean =
+        !be.bluexin.mcui.config.SaoOption.VANILLA_UI() &&
+            !(part == HudPartType.HOTBAR && be.bluexin.mcui.config.SaoOption.DEFAULT_HOTBAR()) &&
+            MCUIThemes.manager.activeTheme.hud.provides(part)
 }

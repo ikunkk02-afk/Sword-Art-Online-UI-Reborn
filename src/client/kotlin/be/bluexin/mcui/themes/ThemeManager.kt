@@ -13,12 +13,20 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Owns one immutable snapshot and publishes it with one atomic reference swap. */
 class ThemeManager(
-    private val preferredTheme: ThemeId?,
+    private var preferredTheme: ThemeId?,
 ) {
     private val snapshotReference = AtomicReference(ThemeSnapshot.EMPTY)
 
     val snapshot: ThemeSnapshot get() = snapshotReference.get()
     val activeTheme: ResolvedTheme get() = snapshot.activeTheme
+
+    fun select(id: ThemeId): Boolean {
+        val current = snapshot
+        val theme = current.themes[id] ?: return false
+        preferredTheme = id
+        snapshotReference.set(current.copy(activeTheme = theme))
+        return true
+    }
 
     /** Returns false only for a loader-wide fatal failure, preserving the previous good snapshot. */
     fun apply(revision: Long, result: ThemeLoadResult): Boolean {

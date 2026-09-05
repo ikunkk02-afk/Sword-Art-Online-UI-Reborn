@@ -45,6 +45,21 @@ class ThemeManagerTest {
         assertSame(theme, manager.activeTheme)
     }
 
+    @Test
+    fun `user selection survives reload and missing selection preserves active snapshot`() {
+        val manager = ThemeManager(preferred)
+        val first = resolvedTheme(preferred)
+        val other = resolvedTheme(ThemeId("test", "other"))
+        val result = validResult(first).copy(themes = mapOf(first.id to first, other.id to other))
+        manager.apply(1, result)
+        assertTrue(manager.select(other.id))
+        assertSame(other, manager.activeTheme)
+        assertFalse(manager.select(ThemeId("test", "missing")))
+        assertSame(other, manager.activeTheme)
+        manager.apply(2, result)
+        assertSame(other, manager.activeTheme)
+    }
+
     private fun validResult(theme: ResolvedTheme) = ThemeLoadResult(
         themes = mapOf(theme.id to theme),
         discoveredCount = 1,

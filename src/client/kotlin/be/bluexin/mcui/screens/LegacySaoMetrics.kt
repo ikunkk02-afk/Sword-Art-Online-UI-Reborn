@@ -6,8 +6,8 @@
 package be.bluexin.mcui.screens
 
 /**
- * Values in this object have a direct origin/1.16.5 source. Compatibility-only
- * dimensions must not be added here.
+ * Historical SAOUI values being reconciled against 1.12.2 ElementRework.
+ * See RESTORATION_1.12.2.md; inherited 1.16.5 values are not full-parity evidence.
  */
 object LegacySaoMetrics {
     const val LEGACY_ATLAS_SIZE = 256
@@ -40,9 +40,15 @@ object LegacySaoMetrics {
 
     // Original source: api/elements/ProfileElement.kt.
     const val PROFILE_X = -190
-    const val PROFILE_Y = -153
+    const val PROFILE_SOURCE_Y = -153
+    // With the original FOUR profile actions, the unlisted child's +60 offset
+    // places source y=205/2 at the orb's 9.5px center without any compensation.
+    const val PROFILE_POINTER_ALIGNMENT_Y = 0
+    const val PROFILE_Y = PROFILE_SOURCE_Y + PROFILE_POINTER_ALIGNMENT_Y
     const val PROFILE_WIDTH = 165
     const val PROFILE_HEIGHT = 256
+    const val PROFILE_TEXTURE_SIZE = 512
+    const val PROFILE_TEXTURE_SCALE = 2
     const val PROFILE_ENTITY_SIZE = 40
     const val PROFILE_ENTITY_CENTER_X_OFFSET = -10
     const val PROFILE_NAME_X = 50
@@ -101,6 +107,7 @@ object LegacySaoMetrics {
     const val MOVE_MILLIS = 250L // position duration=10f
     const val POPUP_OPEN_MILLIS = 500L // duration=20f
     const val POPUP_CLOSE_MILLIS = 250L // duration=10f
+    const val MENU_ENTRY_MILLIS = 500L // origin/2.0-1.12-features duration=20f
 
     // Original source: screens/CoreGui.kt.
     const val ROOT_MOUSE_MOVEMENT = 0.25

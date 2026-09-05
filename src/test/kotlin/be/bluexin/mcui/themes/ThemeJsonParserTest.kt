@@ -3,6 +3,7 @@ package be.bluexin.mcui.themes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ThemeJsonParserTest {
@@ -63,11 +64,12 @@ class ThemeJsonParserTest {
         ).getOrThrow()
 
         assertEquals("1", document.version)
-        assertEquals("text", document.root.type)
-        assertTrue(document.root.enabled)
-        assertFalse(document.root.shadow)
-        assertFalse(document.root.centered)
-        assertEquals(TransformDefinition(), document.root.transform)
+        val root = assertNotNull(document.root)
+        assertEquals("text", root.type)
+        assertTrue(root.enabled)
+        assertFalse(root.shadow)
+        assertFalse(root.centered)
+        assertEquals(TransformDefinition(), root.transform)
     }
 
     @Test
@@ -81,15 +83,16 @@ class ThemeJsonParserTest {
             """.trimIndent(),
         ).getOrThrow()
 
-        assertEquals(2, document.root.children.size)
-        assertEquals(0x80FF0000.toInt(), document.root.children.first().color?.value)
+        val root = assertNotNull(document.root)
+        assertEquals(2, root.children.size)
+        assertEquals(0x80FF0000.toInt(), root.children.first().color?.value)
     }
 
     @Test
     fun `ARGB accepts RGB ARGB and unsigned numeric forms`() {
         fun color(json: String) = parser.parseDocument(
             """{"root":{"type":"rectangle","width":1,"height":1,"color":$json}}""",
-        ).getOrThrow().root.color
+        ).getOrThrow().let { assertNotNull(it.root).color }
 
         assertEquals(0xFFFF0000.toInt(), color("\"#FF0000\"")?.value)
         assertEquals(0x80FF0000.toInt(), color("\"0x80FF0000\"")?.value)

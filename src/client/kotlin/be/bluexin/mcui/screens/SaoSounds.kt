@@ -38,6 +38,7 @@ object SaoSounds {
 
     @JvmStatic
     fun play(sound: SaoSound) {
+        if (!be.bluexin.mcui.config.SaoOption.SOUND_EFFECTS()) return
         Minecraft.getInstance().soundManager.play(SimpleSoundInstance.forUI(sound.event, 1f))
     }
 }

@@ -31,8 +31,8 @@ object HudPartVisibility {
         HudPartType.ENTITY_HEALTH_HUD -> !data.dead &&
             (data.targetEntity != null || data.nearbyEntities.isNotEmpty())
 
-        HudPartType.AM2BARS,
-        HudPartType.PARTY -> false
+        HudPartType.PARTY -> !data.dead && data.partyMembers.isNotEmpty()
+        HudPartType.AM2BARS -> false
     }
 
     private const val HUNGRY_THRESHOLD = 18

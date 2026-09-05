@@ -25,6 +25,7 @@ import be.bluexin.mcui.render.element.HudItemElement
 import be.bluexin.mcui.render.element.LegacySaoEffectsElement
 import be.bluexin.mcui.render.element.LegacySaoEntityHealthElement
 import be.bluexin.mcui.render.element.LegacySaoHudElement
+import be.bluexin.mcui.render.element.LegacySaoPartyElement
 import be.bluexin.mcui.render.element.ProgressBarElement
 import be.bluexin.mcui.render.element.ProgressTint
 import be.bluexin.mcui.render.element.RectangleElement
@@ -355,6 +356,9 @@ class ThemeCompiler(
             "legacy_sao_effects" -> LegacySaoEffectsElement(state, transform)
             "legacy_sao_entity_health" -> compileRequiredTexture(definition, element, path, issues)?.let {
                 LegacySaoEntityHealthElement(state, transform, it)
+            }
+            "legacy_sao_party" -> compileRequiredTexture(definition, element, path, issues)?.let {
+                LegacySaoPartyElement(state, transform, it)
             }
             "effects", "effect_list" -> compileEffectList(definition, element, path, state, transform, issues)
             "entity_health_list", "nearby_entity_health" -> compileEntityHealthList(

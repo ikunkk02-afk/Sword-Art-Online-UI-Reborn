@@ -8,6 +8,6 @@
     "Tencao",
     "Sword Art Online UI: Reborn contributors"
   ],
-  "description": "Original SAOUI 1.16.5 visual and behavioral fidelity rebuild for Minecraft 1.21.1.",
+  "description": "SAOUI 1.12.2 resources and behavior port for Minecraft 1.21.1 (parity work in progress).",
   "namespace": "saoui"
 }

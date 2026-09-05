@@ -37,8 +37,12 @@ object SaoScreenRouter {
             screen is SaoScreenSurface -> screen
             screen.javaClass == TitleScreen::class.java -> SaoTitleScreen()
             screen.javaClass == PauseScreen::class.java && (screen as PauseScreen).showsPauseMenu() -> SaoIngameMenuScreen()
-            screen.javaClass == InventoryScreen::class.java -> SaoInventoryScreen()
-            screen.javaClass == DeathScreen::class.java -> {
+            screen.javaClass == InventoryScreen::class.java -> {
+                val client = net.minecraft.client.Minecraft.getInstance()
+                if (be.bluexin.mcui.config.SaoOption.DEFAULT_INVENTORY() || client.player?.isCreative == true) screen
+                else SaoInventoryScreen()
+            }
+            screen.javaClass == DeathScreen::class.java && !be.bluexin.mcui.config.SaoOption.DEFAULT_DEATH_SCREEN() -> {
                 val accessor = screen as DeathScreenAccessor
                 SaoDeathScreen(accessor.mcuiCauseOfDeath, accessor.mcuiHardcore)
             }

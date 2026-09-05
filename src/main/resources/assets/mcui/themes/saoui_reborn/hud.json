@@ -5,7 +5,7 @@
       "type": "legacy_sao_hud",
       "name": "sao_original_health_box",
       "transform": { "x": 2, "y": 2, "z": 1, "anchor": "TOP_LEFT" },
-      "texture": "saoui:textures/sao/gui.png"
+      "texture": "saoui:textures/guiedt.png"
     },
     "FOOD": {
       "type": "group",
@@ -36,7 +36,7 @@
       "offhandGap": 22,
       "selectionReplacesSlot": true,
       "slotTexture": {
-        "texture": "saoui:textures/sao/gui.png",
+        "texture": "saoui:textures/guiedt.png",
         "u": 0,
         "v": 25,
         "sourceWidth": 20,
@@ -46,7 +46,7 @@
         "tint": "#AACDCDCD"
       },
       "selectedSlotTexture": {
-        "texture": "saoui:textures/sao/gui.png",
+        "texture": "saoui:textures/guiedt.png",
         "u": 0,
         "v": 25,
         "sourceWidth": 20,
@@ -62,7 +62,7 @@
       "transform": { "x": 0, "y": 0, "z": 10, "anchor": "CENTER" },
       "width": 1,
       "height": 1,
-      "texture": "saoui:textures/sao/gui.png",
+      "texture": "saoui:textures/guiedt.png",
       "u": 0,
       "v": 0,
       "sourceWidth": 1,
@@ -109,15 +109,15 @@
       "transform": { "x": 0, "y": 0, "z": 6, "anchor": "TOP_LEFT" }
     },
     "PARTY": {
-      "type": "group",
-      "name": "deferred_saomclib_party_backend_unavailable",
-      "children": []
+      "type": "legacy_sao_party",
+      "name": "sao_original_party",
+      "texture": "saoui:textures/guiedt.png"
     },
     "ENTITY_HEALTH_HUD": {
       "type": "legacy_sao_entity_health",
       "name": "sao_original_nearby_entity_health",
       "transform": { "x": -20, "y": 35, "z": 5, "anchor": "TOP_RIGHT" },
-      "texture": "saoui:textures/sao/entities.png"
+      "texture": "saoui:textures/entities.png"
     }
   }
 }

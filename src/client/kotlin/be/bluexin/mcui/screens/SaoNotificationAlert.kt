@@ -15,8 +15,8 @@ import net.minecraft.resources.ResourceLocation
 /**
  * The 1.16.5 NotificationAlert geometry, adapted to the modern toast sprite API.
  *
- * The legacy party/event producers no longer exist, so this class intentionally exposes an
- * explicit entry point instead of inventing replacement notification sources.
+ * SAOMCLib party events feed this alert through [SaoPartyEvents]. The explicit entry point is
+ * retained for other evidence-backed notification producers.
  */
 class SaoNotificationAlert(
     private val icon: SaoIcon,

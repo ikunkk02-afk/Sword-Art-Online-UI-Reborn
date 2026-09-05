@@ -23,10 +23,17 @@ import net.minecraft.client.gui.GuiGraphics
 
 /** Selects visible HUD parts and delegates resolved elements to the existing renderer. */
 class HudRenderCoordinator {
-    private val animations = AnimationRegistry()
+    private var animations = AnimationRegistry()
     private var cachedThemeRevision = Long.MIN_VALUE
     private var cachedThemeId = ""
     private var cachedTargetLinger: Int? = null
+
+    fun reset() {
+        animations = AnimationRegistry()
+        cachedThemeRevision = Long.MIN_VALUE
+        cachedThemeId = ""
+        cachedTargetLinger = null
+    }
 
     fun render(
         themeRevision: Long,
@@ -36,6 +43,7 @@ class HudRenderCoordinator {
         graphics: GuiGraphics,
         minecraft: Minecraft,
     ) {
+        if (be.bluexin.mcui.config.SaoOption.VANILLA_UI() || minecraft.options.hideGui) return
         animations.beginFrame(
             revision = themeRevision,
             themeId = themeId,
@@ -59,13 +67,25 @@ class HudRenderCoordinator {
             val visitor = RenderingElementVisitor(operations, data, animations)
             hud.globalOverlay?.let { visitor.render(it, context) }
             RENDER_ORDER.forEach { part ->
-                val root = hud[part] ?: return@forEach
+                if (!SaoHudOptions.enabled(part)) return@forEach
+                var root = hud[part] ?: return@forEach
+                if (themeId == "mcui:saoui_reborn" && root is be.bluexin.mcui.render.element.HotbarElement &&
+                    be.bluexin.mcui.config.SaoOption.HOR_HOTBAR()) {
+                    root = root.copy(
+                        orientation = be.bluexin.mcui.themes.HotbarOrientation.HORIZONTAL,
+                        slotSpacing = 0,
+                        offhandGap = 3,
+                        transform = root.transform.copy(x = -92f, y = -23f, anchor = be.bluexin.mcui.themes.HudAnchor.BOTTOM_CENTER),
+                    )
+                }
                 val targetLinger = cachedTargetLinger
                 val lingeringTarget = if (part == HudPartType.ENTITY_HEALTH_HUD) {
                     animations.targetEntity(targetLinger ?: DEFAULT_TARGET_LINGER_MILLIS)
                 } else null
-                val targetVisible = HudPartVisibility.isVisible(part, data) ||
-                    (targetLinger != null && lingeringTarget != null)
+                val targetVisible = (HudPartVisibility.isVisible(part, data) ||
+                    (targetLinger != null && lingeringTarget != null)) &&
+                    (be.bluexin.mcui.config.SaoOption.FORCE_HUD() || data.survivalHud ||
+                        part !in setOf(HudPartType.HEALTH_BOX, HudPartType.FOOD, HudPartType.AIR, HudPartType.EXPERIENCE, HudPartType.ARMOR))
                 if (animations.shouldRenderPart(part, root, targetVisible)) {
                     visitor.render(root, context.copy(visibilityTarget = targetVisible))
                 }

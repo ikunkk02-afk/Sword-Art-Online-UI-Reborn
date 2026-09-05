@@ -48,6 +48,7 @@ interface ElementVisitor {
     fun visit(element: LegacySaoHudElement, context: RenderContext)
     fun visit(element: LegacySaoEffectsElement, context: RenderContext)
     fun visit(element: LegacySaoEntityHealthElement, context: RenderContext)
+    fun visit(element: LegacySaoPartyElement, context: RenderContext)
 }
 
 data class GroupElement(
@@ -215,6 +216,15 @@ data class LegacySaoEffectsElement(
 
 /** Right-edge, negative-width entity cards from the original SAO hud.xml. */
 data class LegacySaoEntityHealthElement(
+    override val renderState: ResolvedRenderState = ResolvedRenderState(),
+    override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
+    val texture: ResourceLocation,
+) : Element {
+    override fun accept(visitor: ElementVisitor, context: RenderContext) = visitor.visit(this, context)
+}
+
+/** SAOMCLib-backed party rows from the original SAO hud.xml. */
+data class LegacySaoPartyElement(
     override val renderState: ResolvedRenderState = ResolvedRenderState(),
     override val transform: ResolvedTransform = ResolvedTransform.IDENTITY,
     val texture: ResourceLocation,

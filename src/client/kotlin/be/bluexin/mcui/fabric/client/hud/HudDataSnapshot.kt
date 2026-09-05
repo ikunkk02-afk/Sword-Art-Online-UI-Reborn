@@ -11,6 +11,7 @@ package be.bluexin.mcui.fabric.client.hud
 
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
+import java.util.UUID
 
 /** Immutable, per-frame values consumed by HUD elements. No live player/world object is retained. */
 data class HudDataSnapshot(
@@ -48,6 +49,7 @@ data class HudDataSnapshot(
     val crosshair: HudCrosshairSnapshot,
     val targetEntity: TargetEntitySnapshot? = null,
     val nearbyEntities: List<TargetEntitySnapshot> = emptyList(),
+    val partyMembers: List<PartyMemberSnapshot> = emptyList(),
     val creative: Boolean,
     val spectator: Boolean,
     val survivalHud: Boolean,
@@ -59,6 +61,18 @@ data class HudDataSnapshot(
     val guiScale: Double,
     val partialTick: Float,
     val onFire: Boolean = false,
+    val mainArmRight: Boolean = true,
+)
+
+/** Immutable SAOMCLib party data used by the original PARTY HUD part. */
+data class PartyMemberSnapshot(
+    val uuid: UUID,
+    val displayName: String,
+    val health: Float,
+    val maxHealth: Float,
+    val online: Boolean,
+    val creative: Boolean,
+    val survivalOrAdventure: Boolean,
 )
 
 /** Safe riding data retained by the animation runtime while the mount HUD exits. */
@@ -78,6 +92,7 @@ data class TargetEntitySnapshot(
     val distance: Float,
     val alive: Boolean,
     val armor: Int? = null,
+    val colorRgb: Int = 0xB91111,
 )
 
 typealias HudEntitySnapshot = TargetEntitySnapshot

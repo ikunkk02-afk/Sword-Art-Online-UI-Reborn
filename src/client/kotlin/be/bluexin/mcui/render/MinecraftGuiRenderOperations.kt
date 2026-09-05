@@ -20,6 +20,7 @@ import org.joml.Vector3f
 import org.lwjgl.opengl.GL11
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.round
 
 /** Minecraft 1.21.1 Mojang-mapped adapter backed by GuiGraphics. */
 class MinecraftGuiRenderOperations(
@@ -44,6 +45,8 @@ class MinecraftGuiRenderOperations(
     }
 
     override fun translate(x: Float, y: Float, z: Float) {
+        // Preserve the original half-pixel entity fill offset and animated transforms.
+        // Rounding here silently erased explicit offsets supplied by the renderer.
         graphics.pose().translate(x, y, z)
     }
 
@@ -77,6 +80,10 @@ class MinecraftGuiRenderOperations(
         // Preserve both pieces of global state touched by the canonical vanilla pattern.
         val previousColor = RenderSystem.getShaderColor().copyOf()
         val blendWasEnabled = GL11.glIsEnabled(GL11.GL_BLEND)
+        // The enemy bar uses negative X scaling, reversing quad winding.
+        // Legacy renderEnemyHealth explicitly disabled culling for these quads.
+        val cullWasEnabled = GL11.glIsEnabled(GL11.GL_CULL_FACE)
+        if (cullWasEnabled) RenderSystem.disableCull()
         if (!blendWasEnabled) RenderSystem.enableBlend()
         try {
             graphics.setColor(tint.red, tint.green, tint.blue, tint.alpha)
@@ -96,6 +103,7 @@ class MinecraftGuiRenderOperations(
         } finally {
             graphics.setColor(previousColor[0], previousColor[1], previousColor[2], previousColor[3])
             if (!blendWasEnabled) RenderSystem.disableBlend()
+            if (cullWasEnabled) RenderSystem.enableCull()
         }
     }
 
